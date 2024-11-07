@@ -74,9 +74,6 @@ for iter = 1:n_iter
     timeline_exit_ps(iter)=length(PS_index_pop);
     PS_list(PS_index_pop)=[];
 
-    
-
-
     for t0 = (iter - 1)*timewindow_width + 1:iter*timewindow_width
     % load new ps and pc
     new_PS = PS_dataset(cell2mat(arrayfun(@(ps) ps.t0 == t0 , PS_dataset,UniformOutput=false)));
@@ -156,12 +153,15 @@ end
 toc
 currentDateTime = datestr(now, 'mmddHHMMSS');
 
-filename = strcat('./results/',currentDateTime);
+%% EDIT ME! （実行環境によって結果保存先のディレクトリパスを変更する必要がある）%%
+% filename = strcat('./results/',currentDateTime);もしMATLABの実行環境がこのディレクトリにある場合はこちらを使う
+% それ以外の場合は以下のように自分の環境に合わせて設定する
+filename = strcat('/Users/rikuseino/Downloads/東京工業大学/denso-research/dev/results/',currentDateTime);
 
 clearvars currentDateTime Drop_pc_first i M_opt new_PS new_PC PS_index PC_index PC_index_to_pop PS_index_to_pop t0 pc_id_max ps_id_max 
 
-
 save(strcat(filename,'.mat'))
+csvwrite(strcat(filename, '_timeline_mixed_ratio.csv'), timeline_mixed_ratio);
 
 % disp(total_n_ebp)
 % for i=1:7
