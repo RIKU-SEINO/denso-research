@@ -2,7 +2,11 @@ clear
 parameter_setting
 
 % ディレクトリのパスを指定
-directory_path = "./datasets/ps2pc2_type05";
+%% EDIT ME! （実行環境によってディレクトリパスを変更する必要がある）%%
+% directory_path = "./datasets/ps2pc2_type05";もしMATLABの実行環境がこのディレクトリにある場合はこちらを使う
+% それ以外の場合は以下のように自分の環境に合わせて設定する
+directory_path = "/Users/rikuseino/Downloads/東京工業大学/denso-research/dev/datasets/ps2pc2_type05";
+%% END OF EDIT ME! %%
 
 % 指定したディレクトリ内の.matファイルの情報を取得
 mat_files_info = dir(fullfile(directory_path, '*.mat'));
