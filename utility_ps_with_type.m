@@ -1,0 +1,12 @@
+function u_ps = utility_ps_with_type(ps,l_c,t)
+    global w_ps alpha_u_ps alpha_u_ps_1;
+    l_ps = abs(ps.x_o-ps.x_d) + abs(ps.y_o-ps.y_d);
+    l_ratio = (l_c + t-ps.t0 - l_ps) / l_ps;
+    if ps.type==1
+        u_ps = w_ps * exp(-alpha_u_ps*l_ratio^2)-10;
+        %u_ps = w_ps-10*(t-ps.t0);
+    else
+        u_ps = w_ps * exp(-alpha_u_ps*l_ratio^2)-10;
+        %u_ps = w_ps-5*(t-ps.t0);
+    end
+end

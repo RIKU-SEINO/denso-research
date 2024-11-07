@@ -1,0 +1,9 @@
+clear
+
+taxi = randi(6,2,2);
+ps_o = randi(6,2,2);
+ps_d = randi(6,2,2);
+pc_o = randi(6,2,2);
+pc_d = randi(6,2,2);
+
+scatter(taxi)

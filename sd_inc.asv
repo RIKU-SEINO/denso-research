@@ -1,0 +1,38 @@
+function [adj_U_v,n_sd] = sd_inc(U_platform, U_v, PS_list)
+
+    [i, j, k] = size(U_v);
+
+    n_sd=0;
+   
+    Distances = zeros(j, 1);
+
+
+    adj_U_v = U_v;
+
+
+    for m = 2:j
+        x_o = PS_list(m).x_o;
+        y_o = PS_list(m).y_o;
+        x_d = PS_list(m).x_d;
+        y_d = PS_list(m).y_d;
+
+
+        Distances(m) = abs(x_o - x_d) + abs(y_o - y_d);
+
+
+        if Distances(m) == 1
+            adj_U_v(2:i, m, :) = adj_U_v(2:i, m, :) + 50;
+            n_sd=n_sd+1;
+        elseif Distances(m) == 2
+            adj_U_v(2:i, m, :) = adj_U_v(2:i, m, :) + 30;
+            n_sd=n_sd+1;
+        elseif Distances(m) == 3
+            adj_U_v(2:i, m, :) = adj_U_v(2:i, m, :) + 10;
+            n_sd=n_sd+1;
+%         elseif Distances(m) == 4
+%             adj_U_v(2:i, m, :) = adj_U_v(2:i, m, :) + 3;
+%             n_sd=n_sd+1;
+       end
+    end
+end
+
