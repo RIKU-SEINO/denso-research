@@ -1,4 +1,7 @@
+clear;
+
 addpath(genpath('./classes'));
+addpath(genpath('./data'));
 
 % 乗客の出現確率ベクトル
 p_i = [0.1; 0.2; 0.3];
@@ -13,13 +16,8 @@ p_jk = [
 % 遷移確率ベクトルを計算
 transitionProbabilityVector = TransitionHelper.calculateTransitionProbabilityVector(p_i, p_jk);
 
-% for situationNumber = 0:63
-%   situation = Situation(situationNumber, "situationNumber");
-%   a = situation.enumerateAllSituations(); 
-%   fprintf('presencePair: %s -> %d\n', mat2str(situation.presencePair), length(a));
-% end
+for situationNumber = 0:63
+  situation = Situation(situationNumber, "situationNumber");
 
-situationNumber = 1;
-situation = Situation(situationNumber, "situationNumber");
-
-[reachableSituations, transition] = situation.enumerateAllSituations();
+  SituationHelper.displayAndSaveExpectedUtilityRecurrenceEquations(situation);
+end
