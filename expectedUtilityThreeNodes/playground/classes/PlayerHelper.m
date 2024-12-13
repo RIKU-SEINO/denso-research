@@ -19,6 +19,29 @@ classdef PlayerHelper
       end
     end
 
+    function playerNameSuffixNum = convertToPlayerNameSuffixNum(playerIndex)
+      switch playerIndex
+        case 1
+          playerNameSuffixNum = 1;
+        case 2
+          playerNameSuffixNum = 1;
+        case 3
+          playerNameSuffixNum = 2;
+        case 4
+          playerNameSuffixNum = 2;
+        case 5
+          playerNameSuffixNum = 3;
+        case 6
+          playerNameSuffixNum = 3;
+        otherwise
+          error("playerIndex must be 1, 2, 3, 4, 5, or 6. you give " + playerIndex);
+      end
+    end
+
+    function result = isTaxi(playerIndex)
+      result = mod(playerIndex, 2) == 1;
+    end
+
     function playerIndex = convertToPlayerIndex(playerName)
       switch playerName
         case "v1"

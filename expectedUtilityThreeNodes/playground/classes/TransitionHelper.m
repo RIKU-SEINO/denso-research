@@ -55,6 +55,8 @@ classdef TransitionHelper
       1, 0, 1, 0, 1, 0; %v1とv2とv3が出現
     ].';
   end
+
+  % 遷移確率ベクトルを計算する
   methods (Static)
     function transitionProbabilityVector = calculateTransitionProbabilityVector(p_i, p_jk)
 
@@ -129,6 +131,58 @@ classdef TransitionHelper
           error(fprintf('sum of row %d of p_jk must be 1', j));
         end
       end
+    end
+  end
+
+  % 状況遷移をネットワークとして可視化する
+  methods (Static)
+    function visualizeTransitionNetwork(transitions)
+      origins1 = [];%プレイヤが出現する直前の状況番号
+      origins2 = [];%プレイヤが出現した直後、マッチする前の状況番号
+      destinations1 = [];%プレイヤが出現した直後、マッチする前の状況番号
+      destinations2 = [];%プレイヤが消滅した直後の状況番号
+
+      for i = 0:63
+        for j = 0:63
+          transition = transitions.transitionValuedCellArray{i+1, j+1};
+          emergedPlayerIndices = transition('emerged');
+          disappearedPlayerIndices = transition('disappeared');
+          if ~isempty(emergedPlayerIndices)
+            origins1 = [origins1, i+1];%正の整数である必要があるため仕方なく+1
+            destinations1 = [destinations1, j+1];%正の整数である必要があるため仕方なく+1
+          elseif ~isempty(disappearedPlayerIndices)
+            origins2 = [origins2, i+1];%正の整数である必要があるため仕方なく+1
+            destinations2 = [destinations2, j+1];%正の整数である必要があるため仕方なく+1
+          end
+        end
+      end
+
+      % ノードとエッジを統合
+      allOrigins = [origins1, origins2];
+      allDestinations = [destinations1, destinations2];
+
+      % ユニークなノードを取得
+      uniqueNodes = unique([allOrigins, allDestinations]); % 全ノードを取得
+      nodeLabels = arrayfun(@(x) sprintf('%d', x-1), uniqueNodes, 'UniformOutput', false); % ノードのラベルを生成
+
+      % ノード番号を新しいインデックスにマッピング
+      nodeMapping = containers.Map(uniqueNodes, 1:length(uniqueNodes));
+      mappedOrigins = arrayfun(@(x) nodeMapping(x), allOrigins);
+      mappedDestinations = arrayfun(@(x) nodeMapping(x), allDestinations);
+
+      % グラフを作成
+      G = digraph(mappedOrigins, mappedDestinations);
+
+      % グラフを描画
+      figure;
+      h = plot(G, 'Layout', 'layered', 'NodeLabel', nodeLabels);
+      title('状況遷移のグラフ');
+
+      highlightedOrigins = arrayfun(@(x) nodeMapping(x), origins2);
+      highlightedDestinations = arrayfun(@(x) nodeMapping(x), destinations2);
+
+      highlight(h, highlightedOrigins, highlightedDestinations, 'EdgeColor', 'red');  % マッチは赤色のエッジ
+      highlight(h, highlightedOrigins, 'NodeColor', 'red'); %マッチ直前の状況は赤色のノード
     end
   end
 end
