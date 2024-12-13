@@ -6,3 +6,6 @@ datasets/*
 
 # results
 results/*
+
+# data
+expectedUtilityThreeNodes/playground/data
