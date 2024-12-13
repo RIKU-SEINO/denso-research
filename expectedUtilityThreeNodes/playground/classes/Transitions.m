@@ -1,4 +1,4 @@
-classdef Transition
+classdef Transitions
   properties
     % 各要素にカテゴリラベルを持つ64x64セル配列。行が現在の状況番号、列が次の状況番号を表す
     % emerged: 出現したプレイヤーインデックス配列, disappeared: 消滅したプレイヤーインデックス配列
@@ -9,7 +9,7 @@ classdef Transition
   end
 
   methods
-    function obj = Transition()
+    function obj = Transitions()
       obj.transitionValuedCellArray = cell(64, 64);
       obj.transitionBinaryCellArray = cell(64, 64);
       for i = 1:64
@@ -26,7 +26,7 @@ classdef Transition
 
   % プロパティを更新する
   methods
-    function obj = updateTransitionValuedMatrix(obj, origin, destination, emergedPlayerIndices, disappearedPlayerIndices)
+    function obj = updateTransitionValuedCellArray(obj, origin, destination, emergedPlayerIndices, disappearedPlayerIndices)
       update_map = containers.Map();
       update_map('emerged') = emergedPlayerIndices;
       update_map('disappeared') = disappearedPlayerIndices;
@@ -34,7 +34,7 @@ classdef Transition
       obj.transitionValuedCellArray{origin+1, destination+1} = update_map;
     end
 
-    function obj = updateTransitionBinaryMatrix(obj, origin, destination, isTransitionable)
+    function obj = updateTransitionBinaryCellArray(obj, origin, destination, isTransitionable)
       % cell配列には1-indexedでアクセスするため、+1することに注意
       obj.transitionBinaryCellArray{origin+1, destination+1} = isTransitionable;
     end

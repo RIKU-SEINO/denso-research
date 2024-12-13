@@ -55,6 +55,17 @@ classdef Situation
     end
   end
 
+  % 今現在のsituationにおいて、指定したplayerIndexと同じノードにプレイヤがいる（=無条件マッチしている）かどうかを返す
+  methods
+    function result = isMatched(obj, playerIndex)
+      if mod(playerIndex, 2) == 1%playerIndexで指定されたプレイヤがタクシーの場合
+        result = obj.isPresent(playerIndex) && obj.isPresent(playerIndex + 1);
+      else%playerIndexで指定されたプレイヤが乗客の場合
+        result = obj.isPresent(playerIndex) && obj.isPresent(playerIndex - 1);
+      end
+    end
+  end
+
   methods
     % situation同士の比較
     function isEqual = eq(obj1, obj2)
@@ -63,17 +74,22 @@ classdef Situation
     end
 
     % 現在の状況から乗客の出現によって遷移できるSituationオブジェクトを列挙する
-    function nextSituations = enumerateNextSituationsEmergingPassenger(obj)
-      % 遷移可能ペアを取得(6x8行列)
-      a = TransitionHelper.emergedPairsPassenger;
+    function nextSituations = enumerateNextSituationsEmergingPassenger(obj, destinationVariation)
+      if destinationVariation
+        % 遷移可能ペアを取得(6x27行列)
+        a = TransitionHelper.emergedPairsPassengerWithDestionation;
+      else
+        % 遷移可能ペアを取得(6x8行列)
+        a = TransitionHelper.emergedPairsPassenger;
+      end
       % 現在の状態(6x1行列)
       b = obj.presencePair;
 
       nextSituations = [];
       for j = 1:size(a, 2)
-        nextPresencePair = a(:, j) | b;
+        nextPresencePair = double(a(:, j) | b);
         nextSituation = Situation(nextPresencePair, "presencePair");
-        if ~ismember(nextSituation, nextSituations)
+        if ~ismember(nextSituation, nextSituations) || destinationVariation
           nextSituations = [nextSituations, nextSituation];
         end
       end
@@ -81,32 +97,46 @@ classdef Situation
 
     % 現在の状況からタクシーの出現によって遷移できるSituationオブジェクトを列挙する
     function nextSituations = enumerateNextSituationsEmergingTaxi(obj)
-      % 遷移可能ペアを取得(6x8行列)
+      % 遷移可能ペアを取得(6x27行列)
       a = TransitionHelper.emergedPairsTaxi;
       % 現在の状態(6x1行列)
       b = obj.presencePair;
-
+  
       nextSituations = [];
       for j = 1:size(a, 2)
-        nextPresencePair = a(:, j) | b;
-        nextSituation = Situation(nextPresencePair, "presencePair");
-        if ~ismember(nextSituation, nextSituations)
-          nextSituations = [nextSituations, nextSituation];
-        end
+          % 初期化
+          nextPresencePair = zeros(size(b,1),1);
+          for i = 1:length(b) - 1
+              % すでにタクシー(b(i)==1)がいるか、もしくはすでに乗客(b(i+1)==1)がいて、同じノードにタクシーが出現する(a(i,j)==1)場合
+              if (b(i) == 1) || ((a(i, j) == 1) && (b(i+1) == 1) && (b(i) == 0))
+                  nextPresencePair(i) = 1;
+              end
+          end
+          nextPresencePair(end) = b(end);
+  
+          % 最後の行は i+1 が存在しないので無視
+  
+          % Situation オブジェクトを作成
+          nextSituation = Situation(nextPresencePair, "presencePair");
+  
+          % 一意性の確認
+          if ~ismember(nextSituation, nextSituations)
+              nextSituations = [nextSituations, nextSituation];
+          end
       end
     end
   end
 
   methods
     % objから到達可能な全てのsituationとそのtransitionを返す
-    function [allSituations, transition] = enumerateAllSituations(obj)
+    function [allSituations, transitions] = enumerateAllSituations(obj)
       queue = {obj};
       visited = containers.Map();
       visited(num2str(obj.situationNumber)) = true;
       
-      allSituations = {obj};
+      allSituations = [obj];
 
-      transition = Transition();
+      transitions = Transitions();
       
       % BFS探索
       while ~isempty(queue)
@@ -114,7 +144,7 @@ classdef Situation
         queue(1) = [];
         
         % 乗客が出現する遷移とタクシーが出現する遷移を列挙
-        nextSituationsEmergingPassenger = currentSituation.enumerateNextSituationsEmergingPassenger();
+        nextSituationsEmergingPassenger = currentSituation.enumerateNextSituationsEmergingPassenger(false);
         nextSituationsEmergingTaxi = currentSituation.enumerateNextSituationsEmergingTaxi();
         
         for i = 1:length(nextSituationsEmergingPassenger)
@@ -125,29 +155,19 @@ classdef Situation
             if ~isKey(visited, key)
                 visited(key) = true;
                 queue{end + 1} = nextSituation;
-                allSituations{end + 1} = nextSituation;
+                allSituations(end + 1) = nextSituation;
             end
 
             [emergedPlayerIndices, disappearedPlayerIndices] = currentSituation.getEmergedAndDisappearedPlayerIndices(nextSituationBeforeMatch);
             if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices)
-              fprintf('currentSituation: %d\n', currentSituation.situationNumber);
-              fprintf('nextSituationBeforeMatch: %d\n', nextSituationBeforeMatch.situationNumber);
-              fprintf('emergedPlayerIndices: %s\n', mat2str(emergedPlayerIndices));
-              fprintf('disappearedPlayerIndices: %s\n', mat2str(disappearedPlayerIndices));
-              disp('---');
-              transition.updateTransitionValuedMatrix(currentSituation.situationNumber, nextSituationBeforeMatch.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
-              transition.updateTransitionBinaryMatrix(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, 1);
+              transitions = transitions.updateTransitionValuedCellArray(currentSituation.situationNumber, nextSituationBeforeMatch.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+              transitions = transitions.updateTransitionBinaryCellArray(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, 1);
             end
 
             [emergedPlayerIndices, disappearedPlayerIndices] = nextSituationBeforeMatch.getEmergedAndDisappearedPlayerIndices(nextSituation);
             if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices)
-              fprintf('nextSituationBeforeMatch: %d\n', nextSituationBeforeMatch.situationNumber);
-              fprintf('nextSituation: %d\n', nextSituation.situationNumber);
-              fprintf('emergedPlayerIndices: %s\n', mat2str(emergedPlayerIndices));
-              fprintf('disappearedPlayerIndices: %s\n', mat2str(disappearedPlayerIndices));
-              disp('---');
-              transition.updateTransitionValuedMatrix(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
-              transition.updateTransitionBinaryMatrix(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, 1);
+              transitions = transitions.updateTransitionValuedCellArray(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+              transitions = transitions.updateTransitionBinaryCellArray(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, 1);
             end
         end
 
@@ -159,29 +179,19 @@ classdef Situation
             if ~isKey(visited, key)
                 visited(key) = true;
                 queue{end + 1} = nextSituation;
-                allSituations{end + 1} = nextSituation;
+                allSituations(end + 1) = nextSituation;
             end
 
             [emergedPlayerIndices, disappearedPlayerIndices] = currentSituation.getEmergedAndDisappearedPlayerIndices(nextSituationBeforeMatch);
             if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices)
-              fprintf('currentSituation: %d\n', currentSituation.situationNumber);
-              fprintf('nextSituationBeforeMatch: %d\n', nextSituationBeforeMatch.situationNumber);
-              fprintf('emergedPlayerIndices: %s\n', mat2str(emergedPlayerIndices));
-              fprintf('disappearedPlayerIndices: %s\n', mat2str(disappearedPlayerIndices));
-              disp('---');
-              transition.updateTransitionValuedMatrix(currentSituation.situationNumber, nextSituationBeforeMatch.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
-              transition.updateTransitionBinaryMatrix(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, 1);
+              transitions = transitions.updateTransitionValuedCellArray(currentSituation.situationNumber, nextSituationBeforeMatch.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+              transitions = transitions.updateTransitionBinaryCellArray(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, 1);
             end
 
             [emergedPlayerIndices, disappearedPlayerIndices] = nextSituationBeforeMatch.getEmergedAndDisappearedPlayerIndices(nextSituation);
             if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices)
-              fprintf('nextSituationBeforeMatch: %d\n', nextSituationBeforeMatch.situationNumber);
-              fprintf('nextSituation: %d\n', nextSituation.situationNumber);
-              fprintf('emergedPlayerIndices: %s\n', mat2str(emergedPlayerIndices));
-              fprintf('disappearedPlayerIndices: %s\n', mat2str(disappearedPlayerIndices));
-              disp('---');
-              transition.updateTransitionValuedMatrix(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
-              transition.updateTransitionBinaryMatrix(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, 1);
+              transitions = transitions.updateTransitionValuedCellArray(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+              transitions = transitions.updateTransitionBinaryCellArray(nextSituationBeforeMatch.situationNumber, nextSituation.situationNumber, 1);
             end
         end
       end
