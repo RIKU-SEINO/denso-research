@@ -79,7 +79,6 @@ classdef SituationHelper
       for playerIndex = 1:6
         situationsWithPlayer = SituationHelper.extractSituationsWithPlayerWithinReachableSituations(reachableSituations, playerIndex);
         disp("-----------------");
-        content = content + "-----------------" + newline;
         playerName = PlayerHelper.convertToPlayerName(playerIndex);
         playerNameSuffixNum = PlayerHelper.convertToPlayerNameSuffixNum(playerIndex);
 
