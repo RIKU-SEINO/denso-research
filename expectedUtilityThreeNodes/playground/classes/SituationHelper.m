@@ -87,27 +87,36 @@ classdef SituationHelper
         for j = 1:length(situationsWithPlayer)
           situationWithPlayer = situationsWithPlayer(j);
           disp("----");
-          fprintf('プレイヤ名: %s, 漸化式左辺: x_%s,%d\n', playerName, playerName, situationWithPlayer.situationNumber);
+          fprintf('プレイヤ名: %s, 漸化式左辺: x_%s_%d\n', playerName, playerName, situationWithPlayer.situationNumber);
           content = content + "----" + newline;
-          content = content + strcat('プレイヤ名: ', playerName, ', 漸化式左辺: x_', playerName, ',', num2str(situationWithPlayer.situationNumber)) + newline;
+          content = content + strcat('プレイヤ名: ', playerName, ', 漸化式左辺: x_', playerName, '_', num2str(situationWithPlayer.situationNumber)) + newline;
 
           nextSituationsBeforeMatch = situationWithPlayer.enumerateNextSituationsEmergingPassenger(true);
 
-          for k = 1:length(nextSituationsBeforeMatch)
+          for k = 1:length(nextSituationsBeforeMatch) % 27回ループ
             nextSituationBeforeMatch = nextSituationsBeforeMatch(k);
-            if nextSituationBeforeMatch.isMatched(playerIndex)
+            if nextSituationBeforeMatch.isMatched(playerIndex) % 無条件マッチ
               if PlayerHelper.isTaxi(playerIndex)
-                fprintf('漸化式右辺: u_%d,%d\n', playerNameSuffixNum, playerNameSuffixNum);
-                content = content + strcat('漸化式右辺: u_', num2str(playerNameSuffixNum), ',', num2str(playerNameSuffixNum)) + newline;
+                destinationNodeNum = TransitionHelper.emergedPairsPassengerWithDestionationValued(playerIndex, k);
+                fprintf('漸化式右辺: u_%d_%d_%d\n', playerNameSuffixNum, playerNameSuffixNum, destinationNodeNum);
+                content = content + strcat('漸化式右辺: u_', num2str(playerNameSuffixNum), '_', num2str(playerNameSuffixNum), '_', num2str(destinationNodeNum)) + newline;
               else
-                fprintf('漸化式右辺: r_%d,%d\n', playerNameSuffixNum, playerNameSuffixNum);
-                content = content + strcat('漸化式右辺: r_', num2str(playerNameSuffixNum), ',', num2str(playerNameSuffixNum)) + newline;
+                fprintf('漸化式右辺: r_%d_%d\n', playerNameSuffixNum, playerNameSuffixNum);
+                content = content + strcat('漸化式右辺: r_', num2str(playerNameSuffixNum), '_', num2str(playerNameSuffixNum)) + newline;
               end
             else
-              text = strcat('漸化式右辺: x_', playerName, ',' , num2str(nextSituationBeforeMatch.situationNumber));
+              text = strcat('漸化式右辺: x_', playerName, '_' , num2str(nextSituationBeforeMatch.situationNumber));
+              if ~PlayerHelper.isTaxi(playerIndex) % 乗客ならば効用がaだけ下がる
+                text = strcat(text, ' +a');
+              end
               passengersInDifferentNode = SituationHelper.getPassengersInDifferentNode(nextSituationBeforeMatch, playerIndex);
+
+              destinationNodeNums = [];
               for l = 1:length(passengersInDifferentNode)
-                text = strcat(text, ' or u_', num2str(playerNameSuffixNum), ',', num2str(PlayerHelper.convertToPlayerNameSuffixNum(passengersInDifferentNode(l))));
+                destinationNodeNums = [destinationNodeNums, TransitionHelper.emergedPairsPassengerWithDestionationValued(passengersInDifferentNode(l), k)];
+              end
+              for l = 1:length(passengersInDifferentNode)
+                text = strcat(text, ' or u_', num2str(playerNameSuffixNum), '_', num2str(PlayerHelper.convertToPlayerNameSuffixNum(passengersInDifferentNode(l))), '_', num2str(destinationNodeNums(l)));
               end
               fprintf('%s\n', text);
               content = content + text + newline;
