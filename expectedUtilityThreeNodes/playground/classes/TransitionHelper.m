@@ -170,8 +170,10 @@ classdef TransitionHelper
     function visualizeTransitionNetwork(transitions)
       origins1 = [];%プレイヤが出現する直前の状況番号
       origins2 = [];%プレイヤが出現した直後、マッチする前の状況番号
+      origins3 = [];%origins1のうち、出現するプレイヤがタクシーである状況番号
       destinations1 = [];%プレイヤが出現した直後、マッチする前の状況番号
       destinations2 = [];%プレイヤが消滅した直後の状況番号
+      destinations3 = [];%destinations1のうち、出現したプレイヤがタクシーである状況番号
 
       for i = 0:63
         for j = 0:63
@@ -181,6 +183,11 @@ classdef TransitionHelper
           if ~isempty(emergedPlayerIndices)
             origins1 = [origins1, i+1];%正の整数である必要があるため仕方なく+1
             destinations1 = [destinations1, j+1];%正の整数である必要があるため仕方なく+1
+            % 状況番号の増加j-iが1, 4, 16, 5, 17, 20, 21のいずれかである場合、出現するプレイヤがタクシーである
+            if ismember(j-i, [1, 4, 16, 5, 17, 20, 21])
+              origins3 = [origins3, i+1];%正の整数である必要があるため仕方なく+1
+              destinations3 = [destinations3, j+1];%正の整数である必要があるため仕方なく+1
+            end
           elseif ~isempty(disappearedPlayerIndices)
             origins2 = [origins2, i+1];%正の整数である必要があるため仕方なく+1
             destinations2 = [destinations2, j+1];%正の整数である必要があるため仕方なく+1
@@ -214,6 +221,11 @@ classdef TransitionHelper
 
       highlight(h, highlightedOrigins, highlightedDestinations, 'EdgeColor', 'red');  % マッチは赤色のエッジ
       highlight(h, highlightedOrigins, 'NodeColor', 'red'); %マッチ直前の状況は赤色のノード
+
+      highlightedOrigins = arrayfun(@(x) nodeMapping(x), origins3);
+      highlightedDestinations = arrayfun(@(x) nodeMapping(x), destinations3);
+
+      highlight(h, highlightedOrigins, highlightedDestinations, 'LineStyle', ':'); % タクシーのマッチは点線のエッジ
     end
   end
 end
