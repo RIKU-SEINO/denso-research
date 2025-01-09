@@ -29,6 +29,36 @@ classdef SituationHelper
     end
   end
 
+  % 指定したノード番号以外のノード番号を返す
+  methods (Static)
+    function [nodeNum1, nodeNum2] = getAnotherNodeNums(nodeNum)
+      if nodeNum == 1
+        nodeNum1 = 2;
+        nodeNum2 = 3;
+      elseif nodeNum == 2
+        nodeNum1 = 1;
+        nodeNum2 = 3;
+      elseif nodeNum == 3
+        nodeNum1 = 1;
+        nodeNum2 = 2;
+      else
+        error('nodeNum must be 1, 2, or 3');
+      end
+    end
+  end
+
+  % 指定したplayerIndexで指定したプレイヤがいるノードと同じノードに出現しうるプレイヤのplayerIndexを返す
+  % あくまで出現しうるプレイヤのplayerIndexを返すだけであり、実際に出現しているかどうかは考慮していない
+  methods (Static)
+    function result = getAnotherPlayerIndexInSameNode(playerIndex)
+      if mod(playerIndex, 2) == 1
+        result = playerIndex + 1;
+      else
+        result = playerIndex - 1;
+      end
+    end
+  end
+
   % 指定した状況において、playerIndexで指定したタクシーがいるノード以外で出現している乗客のplayerIndexを返す
   % つまり、playerIndexで指定したタクシーがマッチする可能性のある乗客のplayerIndexを返す
   % playerIndexで指定したタクシーと同じノードにいる乗客との無条件マッチは含めていない
@@ -96,26 +126,43 @@ classdef SituationHelper
             nextSituationBeforeMatch = nextSituationsBeforeMatch(k);
             if nextSituationBeforeMatch.isMatched(playerIndex) % 無条件マッチ
               if PlayerHelper.isTaxi(playerIndex)
-                destinationNodeNum = TransitionHelper.emergedPairsPassengerWithDestionationValued(playerIndex, k);
-                fprintf('漸化式右辺: u_%d_%d_%d\n', playerNameSuffixNum, playerNameSuffixNum, destinationNodeNum);
+                passengerIndexInSameNode = SituationHelper.getAnotherPlayerIndexInSameNode(playerIndex);
+                destinationNodeNum = TransitionHelper.emergedPairsPassengerWithDestionationValued(passengerIndexInSameNode, k);
+                if destinationNodeNum == 0
+                  [destinationNodeNum1, destinationNodeNum2] = SituationHelper.getAnotherNodeNums(playerNameSuffixNum);
+                  destinationNodeNum = strcat('k(k:', num2str(destinationNodeNum1), ',', num2str(destinationNodeNum2), ')');      
+                  fprintf('漸化式右辺: u_%d_%d_%s\n', playerNameSuffixNum, playerNameSuffixNum, destinationNodeNum);          
+                else
+                  fprintf('漸化式右辺: u_%d_%d_%d\n', playerNameSuffixNum, playerNameSuffixNum, destinationNodeNum);
+                end
                 content = content + strcat('漸化式右辺: u_', num2str(playerNameSuffixNum), '_', num2str(playerNameSuffixNum), '_', num2str(destinationNodeNum)) + newline;
               else
                 fprintf('漸化式右辺: r_%d_%d\n', playerNameSuffixNum, playerNameSuffixNum);
                 content = content + strcat('漸化式右辺: r_', num2str(playerNameSuffixNum), '_', num2str(playerNameSuffixNum)) + newline;
               end
             else
-              text = strcat('漸化式右辺: x_', playerName, '_' , num2str(nextSituationBeforeMatch.situationNumber));
-              if ~PlayerHelper.isTaxi(playerIndex) % 乗客ならば効用がaだけ下がる
-                text = strcat(text, ' +a');
-              end
-              passengersInDifferentNode = SituationHelper.getPassengersInDifferentNode(nextSituationBeforeMatch, playerIndex);
+              if ~PlayerHelper.isTaxi(playerIndex) 
+                % text = strcat(text, ' +a');% 乗客ならば効用がaだけ下がる
+                % 無条件マッチしていない乗客が出現する場合、その乗客と同ノードにmステップ後にタクシーがお迎えに来る場合の効用を計算する
+                text = strcat('漸化式右辺: r_', num2str(playerNameSuffixNum), '_', num2str(playerNameSuffixNum), ' + ma');
+              else
+                text = strcat('漸化式右辺: x_', playerName, '_' , num2str(nextSituationBeforeMatch.situationNumber));
+                passengersInDifferentNode = SituationHelper.getPassengersInDifferentNode(nextSituationBeforeMatch, playerIndex);
 
-              destinationNodeNums = [];
-              for l = 1:length(passengersInDifferentNode)
-                destinationNodeNums = [destinationNodeNums, TransitionHelper.emergedPairsPassengerWithDestionationValued(passengersInDifferentNode(l), k)];
-              end
-              for l = 1:length(passengersInDifferentNode)
-                text = strcat(text, ' or u_', num2str(playerNameSuffixNum), '_', num2str(PlayerHelper.convertToPlayerNameSuffixNum(passengersInDifferentNode(l))), '_', num2str(destinationNodeNums(l)));
+                destinationNodeNums = [];
+                for l = 1:length(passengersInDifferentNode)
+                  destinationNodeNums = [destinationNodeNums, TransitionHelper.emergedPairsPassengerWithDestionationValued(passengersInDifferentNode(l), k)];
+                end
+                for l = 1:length(passengersInDifferentNode)
+                  destinationNodeNum = destinationNodeNums(l);
+                  if destinationNodeNums(l) == 0
+                    [destinationNodeNum1, destinationNodeNum2] = SituationHelper.getAnotherNodeNums(PlayerHelper.convertToPlayerNameSuffixNum(passengersInDifferentNode(l)));
+                    destinationNodeNum = strcat('k(k:', num2str(destinationNodeNum1), ',', num2str(destinationNodeNum2), ')');
+                    text = strcat(text, ' or u_', num2str(playerNameSuffixNum), '_', num2str(PlayerHelper.convertToPlayerNameSuffixNum(passengersInDifferentNode(l))), '_', destinationNodeNum);
+                    continue;
+                  end
+                  text = strcat(text, ' or u_', num2str(playerNameSuffixNum), '_', num2str(PlayerHelper.convertToPlayerNameSuffixNum(passengersInDifferentNode(l))), '_', num2str(destinationNodeNum));
+                end
               end
               fprintf('%s\n', text);
               content = content + text + newline;
