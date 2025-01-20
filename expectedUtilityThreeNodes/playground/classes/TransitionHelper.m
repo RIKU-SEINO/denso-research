@@ -165,22 +165,30 @@ classdef TransitionHelper
     end
   end
 
-  % 状況遷移をネットワークとして可視化する
   methods (Static)
-    function visualizeTransitionNetwork(transitions)
+    % グラフに必要なoriginsとdestinationsを全て取得する
+    function [origins1, origins2, origins3, origins4, destinations1, destinations2, destinations3, destinations4, origins5, destinations5] = getAllODPairs(transitions)
       origins1 = [];%プレイヤが出現する直前の状況番号
       origins2 = [];%プレイヤが出現した直後、マッチする前の状況番号
       origins3 = [];%origins1のうち、出現するプレイヤがタクシーである状況番号
+      origins4 = [];%origins2のうち、異ノードマッチである状況番号
+      origins5 = [];%セルフループ
       destinations1 = [];%プレイヤが出現した直後、マッチする前の状況番号
       destinations2 = [];%プレイヤが消滅した直後の状況番号
       destinations3 = [];%destinations1のうち、出現したプレイヤがタクシーである状況番号
+      destinations4 = [];%destinations2のうち、異ノードマッチによってプレイヤが消滅した後の状況番号
+      destinations5 = [];%セルフループ
 
       for i = 0:63
         for j = 0:63
           transition = transitions.transitionValuedCellArray{i+1, j+1};
+          isTransitionable = transitions.transitionBinaryCellArray{i+1, j+1};
           emergedPlayerIndices = transition('emerged');
           disappearedPlayerIndices = transition('disappeared');
-          if ~isempty(emergedPlayerIndices)
+          if isempty(emergedPlayerIndices) && isempty(disappearedPlayerIndices) && isTransitionable
+            origins5 = [origins5, i+1];%正の整数である必要があるため仕方なく+1
+            destinations5 = [destinations5, j+1];%正の整数である必要があるため仕方なく+1
+          elseif ~isempty(emergedPlayerIndices)
             origins1 = [origins1, i+1];%正の整数である必要があるため仕方なく+1
             destinations1 = [destinations1, j+1];%正の整数である必要があるため仕方なく+1
             % 状況番号の増加j-iが1, 4, 16, 5, 17, 20, 21のいずれかである場合、出現するプレイヤがタクシーである
@@ -189,19 +197,42 @@ classdef TransitionHelper
               destinations3 = [destinations3, j+1];%正の整数である必要があるため仕方なく+1
             end
           elseif ~isempty(disappearedPlayerIndices)
+            % origins2 = [origins2, i+1];%正の整数である必要があるため仕方なく+1
+            % destinations2 = [destinations2, j+1];%正の整数である必要があるため仕方なく+1
+            % % 状況番号の減少i-jが3, 12, 48, 15, 51, 60, 63のいずれでもない場合、異ノードマッチによってプレイヤが消滅した後の状況番号
+            % if ~ismember(i-j, [3, 12, 48, 15, 51, 60, 63])
+            %   % origins4 = [origins4, i+1];%正の整数である必要があるため仕方なく+1
+            %   % destinations4 = [destinations4, j+1];%正の整数である必要があるため仕方なく+1
+            % end
+            % 状況番号の減少i-jが3, 12, 48, 15, 51, 60, 63のいずれでもない場合、異ノードマッチによってプレイヤが消滅した後の状況番号
+
+            %ver2. v1, ps2が出現している状況から、v1, ps2が消滅している状況への遷移は起こり得ない。なぜかというと、v1, ps2という状況になっている段階で、v1とps2はマッチしないことを選択した過去があるため、その後においてもv1とps2がマッチすることはないからである。（By hayakawa）
             origins2 = [origins2, i+1];%正の整数である必要があるため仕方なく+1
             destinations2 = [destinations2, j+1];%正の整数である必要があるため仕方なく+1
           end
         end
       end
+    end
+  end
 
+  % 状況遷移をネットワークとして可視化する
+  methods (Static)
+    function [h,G] = visualizeTransitionNetwork(origins1, origins2, origins3, origins4, destinations1, destinations2, destinations3, destinations4, origins5, destinations5)
       % ノードとエッジを統合
-      allOrigins = [origins1, origins2];
-      allDestinations = [destinations1, destinations2];
+      allOrigins = [origins1, origins2, origins5];
+      allDestinations = [destinations1, destinations2, destinations5];
 
       % ユニークなノードを取得
       uniqueNodes = unique([allOrigins, allDestinations]); % 全ノードを取得
       nodeLabels = arrayfun(@(x) sprintf('%d', x-1), uniqueNodes, 'UniformOutput', false); % ノードのラベルを生成
+
+      % nodeLabelsに対して、その状況において出現しているプレイヤの情報を追加
+      nodeLabels2 = cell(1, length(nodeLabels));
+      for i = 1:length(nodeLabels)
+        nodeNumber = str2num(nodeLabels{i});
+         % situationHelperのconvertToPresencePairTextメソッドを使って、プレイヤの情報を取得
+        nodeLabels2{i} = sprintf('%s: %s', nodeLabels{i}, SituationHelper.convertToPresencePairText(nodeNumber));
+      end
 
       % ノード番号を新しいインデックスにマッピング
       nodeMapping = containers.Map(uniqueNodes, 1:length(uniqueNodes));
@@ -213,19 +244,34 @@ classdef TransitionHelper
 
       % グラフを描画
       figure;
-      h = plot(G, 'Layout', 'layered', 'NodeLabel', nodeLabels);
+      h = plot(G, 'Layout', 'layered', 'NodeLabel', nodeLabels2);
       title('状況遷移のグラフ');
+      h.EdgeColor = 'blue';
+      h.NodeColor = 'blue';
 
-      highlightedOrigins = arrayfun(@(x) nodeMapping(x), origins2);
-      highlightedDestinations = arrayfun(@(x) nodeMapping(x), destinations2);
+      % origins1: 乗客もしくはタクシーが出現
+      % origins2: 同ノードマッチもしくは異ノードマッチ
+      % origins3: タクシーが出現
+      % origins4: 異ノードマッチ
 
-      highlight(h, highlightedOrigins, highlightedDestinations, 'EdgeColor', 'red');  % マッチは赤色のエッジ
-      highlight(h, highlightedOrigins, 'NodeColor', 'red'); %マッチ直前の状況は赤色のノード
-
+      % タクシーの出現は赤色の実線エッジ
       highlightedOrigins = arrayfun(@(x) nodeMapping(x), origins3);
       highlightedDestinations = arrayfun(@(x) nodeMapping(x), destinations3);
+      highlight(h, highlightedOrigins, highlightedDestinations, 'EdgeColor', 'red');
 
-      highlight(h, highlightedOrigins, highlightedDestinations, 'LineStyle', ':'); % タクシーのマッチは点線のエッジ
+      % マッチは黒色の点線エッジ
+      highlightedOrigins = arrayfun(@(x) nodeMapping(x), origins2);
+      highlightedDestinations = arrayfun(@(x) nodeMapping(x), destinations2);
+      highlight(h, highlightedOrigins, highlightedDestinations, 'LineStyle', ':', 'EdgeColor', 'black');
+
+      % 遷移後、状況がまだ変わる場合は黒ノード
+      highlightedOrigins = arrayfun(@(x) nodeMapping(x), [origins2, origins3]);
+      highlight(h, highlightedOrigins, 'NodeColor', 'black');
+
+      % セルフループは緑色の実線エッジ
+      highlightedOrigins = arrayfun(@(x) nodeMapping(x), origins5);
+      highlightedDestinations = arrayfun(@(x) nodeMapping(x), destinations5);
+      highlight(h, highlightedOrigins, highlightedDestinations, 'EdgeColor', 'green', 'LineStyle', '-');
     end
   end
 end

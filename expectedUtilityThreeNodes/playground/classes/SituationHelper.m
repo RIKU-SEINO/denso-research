@@ -10,6 +10,17 @@ classdef SituationHelper
       end
     end
 
+    % 状況番号を引数にとり、その状況において存在するプレイヤー群を、プレイヤ名に変換して返す
+    function result = convertToPresencePairText(newSituationNumber)
+      presencePair = SituationHelper.convertToPresencePair(newSituationNumber);
+      result = '';
+      for i = 1:6
+        if presencePair(i) == 1
+          result = strcat(result, PlayerHelper.convertToPlayerName(i), ',');
+        end
+      end
+    end
+
     % その状況において存在するプレイヤーの組み合わせを状況番号に変換する
     function situationNumber = convertToSituationNumber(newPresencePair)
       situationNumber = bin2dec(num2str(flip(newPresencePair.')));
@@ -144,7 +155,7 @@ classdef SituationHelper
               if ~PlayerHelper.isTaxi(playerIndex) 
                 % text = strcat(text, ' +a');% 乗客ならば効用がaだけ下がる
                 % 無条件マッチしていない乗客が出現する場合、その乗客と同ノードにmステップ後にタクシーがお迎えに来る場合の効用を計算する
-                text = strcat('漸化式右辺: r_', num2str(playerNameSuffixNum), '_', num2str(playerNameSuffixNum), ' + ma');
+                text = strcat('漸化式右辺: r_', num2str(playerNameSuffixNum), '_', num2str(playerNameSuffixNum), ' +ma_', num2str(playerNameSuffixNum));
               else
                 text = strcat('漸化式右辺: x_', playerName, '_' , num2str(nextSituationBeforeMatch.situationNumber));
                 passengersInDifferentNode = SituationHelper.getPassengersInDifferentNode(nextSituationBeforeMatch, playerIndex);
