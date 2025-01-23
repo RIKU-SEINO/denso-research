@@ -254,10 +254,10 @@ classdef TransitionHelper
       % origins3: タクシーが出現
       % origins4: 異ノードマッチ
 
-      % タクシーの出現は赤色の実線エッジ
+      % タクシーの出現は赤色の点線エッジ
       highlightedOrigins = arrayfun(@(x) nodeMapping(x), origins3);
       highlightedDestinations = arrayfun(@(x) nodeMapping(x), destinations3);
-      highlight(h, highlightedOrigins, highlightedDestinations, 'EdgeColor', 'red');
+      highlight(h, highlightedOrigins, highlightedDestinations, 'EdgeColor', 'red', 'LineStyle', ':');
 
       % マッチは黒色の点線エッジ
       highlightedOrigins = arrayfun(@(x) nodeMapping(x), origins2);
@@ -268,10 +268,10 @@ classdef TransitionHelper
       highlightedOrigins = arrayfun(@(x) nodeMapping(x), [origins2, origins3]);
       highlight(h, highlightedOrigins, 'NodeColor', 'black');
 
-      % セルフループは緑色の実線エッジ
+      % セルフループは青色の実線エッジ
       highlightedOrigins = arrayfun(@(x) nodeMapping(x), origins5);
       highlightedDestinations = arrayfun(@(x) nodeMapping(x), destinations5);
-      highlight(h, highlightedOrigins, highlightedDestinations, 'EdgeColor', 'green', 'LineStyle', '-');
+      highlight(h, highlightedOrigins, highlightedDestinations, 'EdgeColor', 'blue', 'LineStyle', '-');
     end
   end
 end

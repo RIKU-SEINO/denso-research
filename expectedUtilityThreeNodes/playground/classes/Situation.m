@@ -428,4 +428,160 @@ classdef Situation
       end
     end
   end
+
+  methods
+    % objから到達可能な全てのsituationとそのtransitionを返す。ただし、エッジを結ぶのはcurrentからSame2を直接結ぶだけ。
+    function [allSituations, transitions] = enumerateAllSituations3(obj)
+      queue = {obj};
+      visited = containers.Map();
+      queueAdded = containers.Map();
+      visited(num2str(obj.situationNumber)) = true;
+      
+      allSituations = [obj];
+
+      transitions = Transitions();
+      
+      % BFS探索
+      while ~isempty(queue)
+        currentSituation = queue{1};
+        queue(1) = [];
+
+        % % もしcurrentSituationにおいて、乗客が存在する場合
+        % if currentSituation.isPresent(2) || currentSituation.isPresent(4) || currentSituation.isPresent(6)
+        %   continue;
+        % end
+        
+        % 乗客が出現する遷移とタクシーが出現する遷移を列挙(currentSituation -> nextSituationBeforeMatch)
+        nextSituationsEmergingPassengerBeforeMatch = currentSituation.enumerateNextSituationsEmergingPassenger(false);
+        % nextSituationsEmergingTaxiBeforeMatch = currentSituation.enumerateNextSituationsEmergingTaxi();
+        % nextSituationsBeforeMatch = [nextSituationsEmergingPassengerBeforeMatch, nextSituationsEmergingTaxiBeforeMatch]; %同ノードへのタクシーの出現はこのステップでは考慮しない
+        nextSituationsBeforeMatch = nextSituationsEmergingPassengerBeforeMatch;
+        for i = 1:length(nextSituationsBeforeMatch)
+            nextSituationBeforeMatch = nextSituationsBeforeMatch(i);
+            key = num2str(nextSituationBeforeMatch.situationNumber);
+            if ~isKey(visited, key)
+                visited(key) = true;
+                allSituations(end + 1) = nextSituationBeforeMatch;
+            end
+
+            % [emergedPlayerIndices, disappearedPlayerIndices] = currentSituation.getEmergedAndDisappearedPlayerIndices(nextSituationBeforeMatch);
+            % if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices) || isempty(disappearedPlayerIndices) || isempty(emergedPlayerIndices) % 乗客が全く出現しないこともあるのでセルフループも考慮
+            %   transitions = transitions.updateTransitionValuedCellArray(currentSituation.situationNumber, nextSituationBeforeMatch.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+            %   transitions = transitions.updateTransitionBinaryCellArray(currentSituation.situationNumber, nextSituationBeforeMatch.situationNumber, 1);
+            % end
+        end
+
+        % nextSituationBeforeMatchにおいて、同じノードでマッチしているプレイヤを削除する(nextSituationBeforeMatch -> nextSituationBeforeSecondMatch)
+        nextSituationsBeforeSecondMatch = [];
+        for i = 1:length(nextSituationsBeforeMatch)
+            nextSituationBeforeMatch = nextSituationsBeforeMatch(i);
+            nextSituationBeforeSecondMatch = nextSituationBeforeMatch.removeTaxiAndPassengerInSameNode();
+            nextSituationsBeforeSecondMatch = [nextSituationsBeforeSecondMatch, nextSituationBeforeSecondMatch];
+            key = num2str(nextSituationBeforeSecondMatch.situationNumber);
+            if ~isKey(visited, key)
+                visited(key) = true;
+                allSituations(end + 1) = nextSituationBeforeSecondMatch;
+            end
+
+            % [emergedPlayerIndices, disappearedPlayerIndices] = nextSituationBeforeMatch.getEmergedAndDisappearedPlayerIndices(nextSituationBeforeSecondMatch);
+            % if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices)
+            %   transitions = transitions.updateTransitionValuedCellArray(nextSituationBeforeMatch.situationNumber, nextSituationBeforeSecondMatch.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+            %   transitions = transitions.updateTransitionBinaryCellArray(nextSituationBeforeMatch.situationNumber, nextSituationBeforeSecondMatch.situationNumber, 1);
+            % end
+        end
+
+        % nextSituationBeforeSecondMatchにおいて、異なるノードでマッチしているプレイヤを削除する(nextSituationBeforeSecondMatch -> nextSituationAfterSecondMatch)
+        nextSituationsAfterSecondMatch = [];
+        for i = 1:length(nextSituationsBeforeSecondMatch)
+          nextSituationBeforeSecondMatch = nextSituationsBeforeSecondMatch(i);
+          % nextSituationBeforeSecondMatchにおいて、異なるノードでマッチしているプレイヤを削除する(nextSituationBeforeSecondMatch -> nextSituation)
+          nextSituationsAfterDifferentBeforeSame = nextSituationBeforeSecondMatch.removeTaxiAndPassengerInDifferentNode(); % ex. ps1, v2, ps3で、ps3とv2が異ノードマッチを選択-> ps1が取り残される
+          % nextSituationAfterSame = nextSituationBeforeSecondMatch.removeAllPassengers();% ex. ps1, v2で、ps1が同ノードマッチを選択-> v2
+          nextSituationAfterSame1 = nextSituationBeforeSecondMatch.addTaxiToPassengerInSameNode();% ex. ps1, v2で、ps1が同ノードマッチを選択-> v1, ps1, v2
+          nextSituationAfterSame2 = nextSituationAfterSame1.removeTaxiAndPassengerInSameNode();% ex. v1, ps1, v2 -> v2
+          nextSituationsAfterSecondMatch = [nextSituationsAfterSecondMatch, nextSituationAfterSame2];
+
+          key = num2str(nextSituationAfterSame1.situationNumber);
+          if ~isKey(visited, key)
+              visited(key) = true;
+              allSituations(end + 1) = nextSituationAfterSame1;
+          end
+          key = num2str(nextSituationAfterSame2.situationNumber);
+          if ~isKey(visited, key)
+              visited(key) = true;
+              allSituations(end + 1) = nextSituationAfterSame2;
+          end
+          % 1サイクルの終了なので、queueに追加するが、もしnextSituationAfterSame2がqueueに追加された過去がなければ、queueに追加する。追加履歴はqueueAddedに記録
+          if ~isKey(queueAdded, key)
+            queueAdded(key) = true;
+            queue{end + 1} = nextSituationAfterSame2;
+            allSituations(end + 1) = nextSituationAfterSame2;
+          end
+
+          % [emergedPlayerIndices, disappearedPlayerIndices] = nextSituationBeforeSecondMatch.getEmergedAndDisappearedPlayerIndices(nextSituationAfterSame1);
+          % if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices)
+          %   transitions = transitions.updateTransitionValuedCellArray(nextSituationBeforeSecondMatch.situationNumber, nextSituationAfterSame1.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+          %   transitions = transitions.updateTransitionBinaryCellArray(nextSituationBeforeSecondMatch.situationNumber, nextSituationAfterSame1.situationNumber, 1);
+          % end
+
+          % [emergedPlayerIndices, disappearedPlayerIndices] = nextSituationAfterSame1.getEmergedAndDisappearedPlayerIndices(nextSituationAfterSame2);
+          % if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices)
+          %   transitions = transitions.updateTransitionValuedCellArray(nextSituationAfterSame1.situationNumber, nextSituationAfterSame2.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+          %   transitions = transitions.updateTransitionBinaryCellArray(nextSituationAfterSame1.situationNumber, nextSituationAfterSame2.situationNumber, 1);
+          % end
+
+          [emergedPlayerIndices, disappearedPlayerIndices] = currentSituation.getEmergedAndDisappearedPlayerIndices(nextSituationAfterSame2);
+          if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices) || isempty(disappearedPlayerIndices) || isempty(emergedPlayerIndices) % セルフループも考慮
+            transitions = transitions.updateTransitionValuedCellArray(currentSituation.situationNumber, nextSituationAfterSame2.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+            transitions = transitions.updateTransitionBinaryCellArray(currentSituation.situationNumber, nextSituationAfterSame2.situationNumber, 1);
+          end
+
+          % nextSituationBeforeSecondMatchが ps1, v2, v3の時、v2とps3が異ノードマッチを起こす場合、ps1は取り残されるので、取り残されたps1は同ノードマッチを起こす
+          for j = 1:length(nextSituationsAfterDifferentBeforeSame)
+            nextSituationAfterDifferentBeforeSame = nextSituationsAfterDifferentBeforeSame(j);
+            % nextSituationAfterDifferentAfterSame = nextSituationAfterDifferentBeforeSame.removeAllPassengers();
+            nextSituationAfterDifferentAfterSame1 = nextSituationAfterDifferentBeforeSame.addTaxiToPassengerInSameNode();
+            nextSituationAfterDifferentAfterSame2 = nextSituationAfterDifferentAfterSame1.removeTaxiAndPassengerInSameNode();
+
+            nextSituationsAfterSecondMatch = [nextSituationsAfterSecondMatch, nextSituationAfterDifferentAfterSame2];
+
+            key = num2str(nextSituationAfterDifferentAfterSame1.situationNumber);
+            if ~isKey(visited, key)
+                visited(key) = true;
+                allSituations(end + 1) = nextSituationAfterDifferentAfterSame1;
+            end
+            key = num2str(nextSituationAfterDifferentAfterSame2.situationNumber);
+            if ~isKey(visited, key)
+                visited(key) = true;
+                allSituations(end + 1) = nextSituationAfterDifferentAfterSame2;
+            end
+            % 1サイクルの終了なので、queueに追加するが、もしnextSituationAfterDifferentAfterSame2がqueueに追加された過去がなければ、queueに追加する。追加履歴はqueueAddedに記録
+            if ~isKey(queueAdded, key)
+              queueAdded(key) = true;
+              queue{end + 1} = nextSituationAfterDifferentAfterSame2;
+              allSituations(end + 1) = nextSituationAfterDifferentAfterSame2;
+            end
+
+            % [emergedPlayerIndices, disappearedPlayerIndices] = nextSituationBeforeSecondMatch.getEmergedAndDisappearedPlayerIndices(nextSituationAfterDifferentAfterSame1);
+            % if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices)
+            %   transitions = transitions.updateTransitionValuedCellArray(nextSituationBeforeSecondMatch.situationNumber, nextSituationAfterDifferentAfterSame1.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+            %   transitions = transitions.updateTransitionBinaryCellArray(nextSituationBeforeSecondMatch.situationNumber, nextSituationAfterDifferentAfterSame1.situationNumber, 1);
+            % end
+
+            % [emergedPlayerIndices, disappearedPlayerIndices] = nextSituationAfterDifferentAfterSame1.getEmergedAndDisappearedPlayerIndices(nextSituationAfterDifferentAfterSame2);
+            % if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices)
+            %   transitions = transitions.updateTransitionValuedCellArray(nextSituationAfterDifferentAfterSame1.situationNumber, nextSituationAfterDifferentAfterSame2.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+            %   transitions = transitions.updateTransitionBinaryCellArray(nextSituationAfterDifferentAfterSame1.situationNumber, nextSituationAfterDifferentAfterSame2.situationNumber, 1);
+            % end
+
+            [emergedPlayerIndices, disappearedPlayerIndices] = currentSituation.getEmergedAndDisappearedPlayerIndices(nextSituationAfterDifferentAfterSame2);
+            if ~isempty(disappearedPlayerIndices) || ~isempty(emergedPlayerIndices) || isempty(disappearedPlayerIndices) || isempty(emergedPlayerIndices) % セルフループも考慮
+              transitions = transitions.updateTransitionValuedCellArray(currentSituation.situationNumber, nextSituationAfterDifferentAfterSame2.situationNumber, emergedPlayerIndices, disappearedPlayerIndices);
+              transitions = transitions.updateTransitionBinaryCellArray(currentSituation.situationNumber, nextSituationAfterDifferentAfterSame2.situationNumber, 1);
+            end
+          end
+        end      
+      end
+    end
+  end
 end
