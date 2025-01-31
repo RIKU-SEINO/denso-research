@@ -25,13 +25,23 @@ classdef Situation
   end
 
   methods
-    function isequal = eq(obj1, obj2)
-      isequal = obj1.situationNumber == obj2.situationNumber;
+    function isequal = eq(obj, obj2)
+      isequal = (obj.situationNumber == obj2.situationNumber) && all(obj.destinationNodes == obj2.destinationNodes);
+    end
+
+    function result = ismember(obj, situationArray)
+      result = false;
+      for i = 1:length(situationArray)
+        if obj == situationArray(i)
+          result = true;
+          break;
+        end
+      end
     end
   end
 
-  % 現在のsituationにおいて、現行プレイヤ集合の0-1表記配列を返す
   methods
+    % 現在のsituationにおいて、現行プレイヤ集合の0-1表記配列を返す
     function result = getPresenceSet(obj)
       result = zeros(6, 1);
       situationNumberBinary = dec2bin(obj.situationNumber, 6);
@@ -40,10 +50,8 @@ classdef Situation
         result(playerIndex) = str2double(situationNumberBinary(7-playerIndex));
       end
     end
-  end
 
-  % 現在のsituationにおいて、潜在プレイヤ集合の0-1表記配列を返す。
-  methods
+    % 現在のsituationにおいて、潜在プレイヤ集合の0-1表記配列を返す。
     function result = getPotentialSet(obj)
       presenceSet = obj.getPresenceSet();
       result = zeros(6, 1);
@@ -62,7 +70,8 @@ classdef Situation
 
   % 現在のsituationにおいて、マッチング対象プレイヤ集合をタクシーと乗客に分けてPlayerオブジェクトの配列として返す
   methods
-    function [taxis, passengers] = getMatchablePlayers(obj, m)
+    function [taxis, passengers] = getMatchablePlayers(obj)
+      m = ParamsHelper.m;
       presenceSet = obj.getPresenceSet();
       potentialSet = obj.getPotentialSet();
       taxis = [];
@@ -128,6 +137,49 @@ classdef Situation
       end
 
       newSituation = Situation(newSituationNumber, newDestinationNodes);
+    end
+  end
+
+  methods
+    % 現在のsituationにおいて、考えられる全てのPlayerMatchingオブジェクトを配列として返す
+    function playerMatchings = getPlayerMatchings(obj)
+      [taxis, passengers] = obj.getMatchablePlayers();
+      playerMatchings = UtilsHelper.generateMatchings(taxis, passengers);
+    end
+
+    % 現在のsituationにおいて、考えられる全てのPlayerMatchingオブジェクト配列のうち、最適なものを返す。もし期待効用にxが含まれていて、最適なものが一意に定まらない場合は、空を返す
+    function playerMatching = getOptimalPlayerMatching(obj, x)
+      playerMatchings = obj.getPlayerMatchings();
+      optimalPlayerMatching = [];
+      maxExpectedUtility = Inf;
+
+      symFlag = false;
+      expectedUtilityArray = [];
+      for i = 1:length(playerMatchings)
+        playerMatching = playerMatchings(i);
+        expectedUtility = sum(playerMatching.calculateExpectedUtilities(x));
+        expectedUtilityArray = [expectedUtilityArray, expectedUtility];
+        try
+          if length(playerMatchings) == 1
+            optimalPlayerMatching = playerMatching;
+          end
+          if eval(expectedUtility > maxExpectedUtility)
+            maxExpectedUtility = expectedUtility;
+            optimalPlayerMatching = playerMatching;
+          end
+        catch
+          symFlag = true;
+          continue;
+        end
+      end
+
+      if symFlag
+        disp(expectedUtilityArray);
+        playerMatching = [];
+        disp('-----------------');
+      else
+        playerMatching = optimalPlayerMatching;
+      end
     end
   end
 end
