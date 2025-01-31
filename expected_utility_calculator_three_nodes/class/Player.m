@@ -43,6 +43,16 @@ classdef Player
     end
   end
 
+  methods
+    function result = isTaxi(obj)
+      result = (obj.playerIndex == 1) || (obj.playerIndex == 3) || (obj.playerIndex == 5);
+    end
+
+    function result = isPassenger(obj)
+      result = (obj.playerIndex == 2) || (obj.playerIndex == 4) || (obj.playerIndex == 6);
+    end
+  end
+
   % playerが出現するノード番号を返す
   methods
     function result = getNodeNum(obj)
