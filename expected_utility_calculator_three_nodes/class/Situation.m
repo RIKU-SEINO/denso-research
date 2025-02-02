@@ -121,7 +121,7 @@ classdef Situation
       for playerIndex = 1:length(appearedPlayerIndices)
         appearedPlayerIndex = appearedPlayerIndices(playerIndex);
         if ~obj.isPlayerPresent(appearedPlayerIndex)
-          newSituationNumber = obj.situationNumber + 2^(appearedPlayerIndex-1);
+          newSituationNumber = newSituationNumber + 2^(appearedPlayerIndex-1);
         else
           newDestinationNodes(appearedPlayerIndex) = 0;
         end
@@ -137,6 +137,18 @@ classdef Situation
       end
 
       newSituation = Situation(newSituationNumber, newDestinationNodes);
+    end
+
+    % 現在のsituationから、乗客が出現した直後の起こりうる全てのsituationを返す
+    function newSituations = createNextSituationsByOneStep(obj)
+      newSituations = [];
+      destinationNodesCandidates = ParamsHelper.destinationNodesCandidates;
+      for i = 1:length(destinationNodesCandidates)
+        destinationNodesCandidate = destinationNodesCandidates(:, i);
+        appearedPlayerIndices = find(destinationNodesCandidate);
+
+        newSituations = [newSituations, obj.createNextSituation(appearedPlayerIndices, [], destinationNodesCandidate)];
+      end
     end
   end
 

@@ -1,0 +1,134 @@
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  1x1 の cell 配列
+
+    {[0]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  2x1 の cell 配列
+
+    {[x_v1_1 + 1790]}
+    {[x_v2_4 + 1900]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  2x1 の cell 配列
+
+    {[x_v1_1 + 4500]}
+    {[x_v2_4 + 4350]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  2x1 の cell 配列
+
+    {[x_v1_1 + 1680 ]}
+    {[x_v3_16 + 1900]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  3x1 の cell 配列
+
+    {[x_v2_4 + 1680           ]}
+    {[x_v3_16 + 1790          ]}
+    {[x_v2_20 + x_v3_20 + 1900]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  3x1 の cell 配列
+
+    {[x_v1_5 + x_v2_5 + 1680  ]}
+    {[x_v1_17 + x_v3_17 + 1790]}
+    {[x_v2_20 + x_v3_20 + 1900]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  3x1 の cell 配列
+
+    {[x_v1_1 + 4350           ]}
+    {[x_v1_17 + x_v3_17 + 4500]}
+    {[x_v3_16 + 4350          ]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  2x1 の cell 配列
+
+    {[x_v2_4 + 4350 ]}
+    {[x_v3_16 + 4500]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  3x1 の cell 配列
+
+    {[x_v1_5 + x_v2_5 + 4350  ]}
+    {[x_v1_17 + x_v3_17 + 4500]}
+    {[x_v2_20 + x_v3_20 + 4350]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  6x1 の cell 配列
+
+    {[x_v1_1 + 6180 ]}
+    {0x0 double      }
+    {0x0 double      }
+    {0x0 double      }
+    {[x_v2_4 + 6250 ]}
+    {[x_v3_16 + 6400]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  3x1 の cell 配列
+
+    {[x_v1_5 + x_v2_5 + 2850]}
+    {[x_v1_1 + 2730         ]}
+    {[x_v2_4 + 2610         ]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  2x1 の cell 配列
+
+    {[x_v1_1 + 2850 ]}
+    {[x_v3_16 + 2610]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  2x1 の cell 配列
+
+    {[x_v2_4 + 2850 ]}
+    {[x_v3_16 + 2730]}
+
+---New MaxCandidates---
+
+totalExpectedUtilities_potentialMaxFiltered =
+
+  3x1 の cell 配列
+
+    {[x_v1_5 + x_v2_5 + 2850  ]}
+    {[x_v1_17 + x_v3_17 + 2730]}
+    {[x_v2_20 + x_v3_20 + 2610]}

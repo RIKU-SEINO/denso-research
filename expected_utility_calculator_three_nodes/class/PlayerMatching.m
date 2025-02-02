@@ -77,5 +77,11 @@ classdef PlayerMatching
         end
       end
     end
+
+    % PlayerMatchingにおける社会全体の期待効用を計算する
+    function expectedUtility = calculateTotalExpectedUtility(obj, x)
+      expectedUtilities = obj.calculateExpectedUtilities(x);
+      expectedUtility = sum(expectedUtilities);
+    end
   end
 end
