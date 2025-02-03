@@ -43,8 +43,21 @@ for situationNumber = 0:63
     end
 end
 
-allConditions = {};
+% allConditions.matを読み込む
+dataAllConditions = load('data/allConditions.mat', 'allConditions');
+try
+    error;
+    allConditions = data.allConditions;
+    allConditionsPrepared = true;
+catch
+    allConditions = {};
+    allConditionsPrepared = false;
+end
+
 for playerIndex = 1:size(x,2)
+    if allConditionsPrepared
+        break;
+    end
     for situationNumber = 0:size(x,1)-1
         disp("状況"+situationNumber+"のプレイヤー"+playerIndex+"の期待効用: ");
         disp(x(situationNumber+1, playerIndex));
@@ -53,7 +66,7 @@ for playerIndex = 1:size(x,2)
         nextSituations = currentSituation.createNextSituationsByOneStep();
 
         rightVec = cell(length(nextSituations), 1);
-        rightVec2 = cell(length(nextSituations), 1);
+        conditionsVec = cell(length(nextSituations), 1);
 
         for i = 1:length(nextSituations)
             nextSituation = nextSituations(i);
@@ -73,7 +86,7 @@ for playerIndex = 1:size(x,2)
             allConditionsByNextSituation = {};
             for j = 1:length(totalExpectedUtilities_onlyMax)
                 totalExpectedUtility = totalExpectedUtilities_onlyMax{j};
-                if ~isempty(totalExpectedUtility)
+                if ~isempty(totalExpectedUtility) % 0*0 doubleでmaskingされていないものは、最大となる候補なので、その候補についてのみ社会全体の期待効用和を計算
                     optimalPlayerMatchings = [optimalPlayerMatchings, playerMatchings(j)];
                     expectedUtilitiesNextStep = playerMatchings(j).calculateExpectedUtilities(x);
                     expectedUtilityNextStepArray = [expectedUtilityNextStepArray, expectedUtilitiesNextStep(playerIndex)];
@@ -105,12 +118,20 @@ for playerIndex = 1:size(x,2)
                 end
             end
             rightVec{i} = expectedUtilityNextStepArray;
-            rightVec2{i} = conditions;
+            conditionsVec{i} = conditions;
         end
 
         allConditions
+        save("data/right_vec/rightVec_"+string(playerIndex)+"_"+string(situationNumber)+".mat", "rightVec");
+        save("data/conditions_vec/conditionsVec_"+string(playerIndex)+"_"+string(situationNumber)+".mat", "conditionsVec");
     end
 end
+save('data/allConditions.mat', 'allConditions');
+
+% 期待効用ベクトルと条件式ベクトルをそれぞれテキストファイルに出力する
+ExpectedUtilityHelper.writeRightVecs("data/right_vec/right_vec_summary.txt");
+Condition.writeConditions("data/conditions_vec/conditions_vec_summary.txt");
+
 
 % uniqueMaxCandidates = {};
 % for i = 1:length(currentSituations)
