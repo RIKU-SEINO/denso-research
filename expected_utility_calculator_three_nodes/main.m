@@ -4,133 +4,38 @@ warning('off','all')
 warning
 addpath('./class');
 
+%% パラメータ設定
+[w, c, r_0, a, m, p, p_, u, r, q, d] = ParamsHelper.getSymbolicParams();
 
 %% 変数の定義
 x = ExpectedUtilityHelper.generateExpectedUtilitiesSymbolicMatrix();
 
-% 64通りの状況について、次のステップ
-situationNumber = 6;
-% ps1(=playerIndex=2)のみ出現
-currentSituation = Situation(situationNumber);
-appearedPlayerIndices = [2]; % appearedPlayerIndicesの各要素とappearedPlayerDestinationNodesの各要素は対応している
-appearedPlayerDestinationNodes = [3]; % appearedPlayerIndicesの各要素とappearedPlayerDestinationNodesの各要素は対応している
-disappearedPlayerIndices = [];
-destinationNodes = zeros(6, 1);
-for i = 1:length(appearedPlayerIndices)
-    appearedPlayerIndex = appearedPlayerIndices(i);
-    destinationNodes(appearedPlayerIndex) = appearedPlayerDestinationNodes(i);
-end
-nextSituation = currentSituation.createNextSituation(appearedPlayerIndices, disappearedPlayerIndices, destinationNodes);
-playerMatchings = nextSituation.getPlayerMatchings();
-for i = 1:length(playerMatchings)
-    disp("状況"+nextSituation.situationNumber+"のマッチング"+i+"の期待効用");
-    playerMatching = playerMatchings(i);
-    expectedUtilities = playerMatching.calculateExpectedUtilities(x);
-    disp(expectedUtilities);
-end
-
-currentSituations = [];
-for situationNumber = 0:63
-    currentSituationBase = Situation(situationNumber);
-    presenceSet = currentSituationBase.getPresenceSet();
-    for i = 1:27
-        destinationNodes = ParamsHelper.destinationNodesCandidates(:, i);
-        newDestinationNodes = destinationNodes .* presenceSet;
-        currentSituationWithDestinationNodes = Situation(situationNumber, newDestinationNodes);
-        if ~currentSituationWithDestinationNodes.ismember(currentSituations)
-            currentSituations = [currentSituations, currentSituationWithDestinationNodes];
-        end
-    end
-end
-
-% allConditions.matを読み込む
-dataAllConditions = load('data/allConditions.mat', 'allConditions');
 try
-    error;
-    allConditions = data.allConditions;
-    allConditionsPrepared = true;
-catch
-    allConditions = {};
-    allConditionsPrepared = false;
+    dataAllConditions = load('data/allConditions.mat', 'allConditions');
+    allConditions = dataAllConditions.allConditions;
+catch ME
+    disp(ME.message);
+    ExpectedUtilityHelper.saveExpectedUtilityMaterials(x);
+
+    ExpectedUtilityHelper.writeRightVecs("data/right_vec/right_vec_summary.txt");
+    ExpectedUtilityHelper.writeConditions("data/conditions_vec/conditions_vec_summary.txt");
+    ExpectedUtilityHelper.writeAllConditions("data/allConditions.mat");
+
+    dataAllConditions = load('data/allConditions.mat', 'allConditions');
+    allConditions = dataAllConditions.allConditions;
 end
 
-for playerIndex = 1:size(x,2)
-    if allConditionsPrepared
-        break;
-    end
-    for situationNumber = 0:size(x,1)-1
-        disp("状況"+situationNumber+"のプレイヤー"+playerIndex+"の期待効用: ");
-        disp(x(situationNumber+1, playerIndex));
+%% 期待効用の計算
 
-        currentSituation = Situation(situationNumber);
-        nextSituations = currentSituation.createNextSituationsByOneStep();
+% まずx_v1_1, x_v2_4, x_v3_16を求める
+% for playerIndex = [1,3,5]
+%     s = (playerIndex - 1)^2;
+%     dataRightVec = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(s) + ".mat", "rightVec");
+%     rightVec = dataRightVec.rightVec;
+%     disp(q.' * cell2sym(rightVec));
+% end
 
-        rightVec = cell(length(nextSituations), 1);
-        conditionsVec = cell(length(nextSituations), 1);
 
-        for i = 1:length(nextSituations)
-            nextSituation = nextSituations(i);
-            playerMatchings = nextSituation.getPlayerMatchings();
-            totalExpectedUtilities = sym(zeros(length(playerMatchings), 1));
-            for j = 1:length(playerMatchings)
-                playerMatching = playerMatchings(j);
-                totalExpectedUtilities(j) = playerMatching.calculateTotalExpectedUtility(x);
-            end
-
-            totalExpectedUtilities_onlyMax = UtilsHelper.getMaxCandidates(totalExpectedUtilities); % 最大となる候補のみに絞り、最大とならない候補については0*0 doubleでmasking
-
-            optimalPlayerMatchings = [];
-            expectedUtilityNextStepArray = [];
-            totalExpectedUtilityNextStepArray = [];
-
-            allConditionsByNextSituation = {};
-            for j = 1:length(totalExpectedUtilities_onlyMax)
-                totalExpectedUtility = totalExpectedUtilities_onlyMax{j};
-                if ~isempty(totalExpectedUtility) % 0*0 doubleでmaskingされていないものは、最大となる候補なので、その候補についてのみ社会全体の期待効用和を計算
-                    optimalPlayerMatchings = [optimalPlayerMatchings, playerMatchings(j)];
-                    expectedUtilitiesNextStep = playerMatchings(j).calculateExpectedUtilities(x);
-                    expectedUtilityNextStepArray = [expectedUtilityNextStepArray, expectedUtilitiesNextStep(playerIndex)];
-                    totalExpectedUtilityNextStepArray = [totalExpectedUtilityNextStepArray, totalExpectedUtility];
-                end
-            end
-
-            if isempty(optimalPlayerMatchings)
-               error('ERROR: optimalPlayerMatchings is empty');
-            end
-
-            conditions = cell(length(totalExpectedUtilityNextStepArray), 1);
-            if length(totalExpectedUtilityNextStepArray) > 1
-                for j = 1:length(totalExpectedUtilityNextStepArray)% [1,2,3,4]
-                    totalExpectedUtilityNextStep = totalExpectedUtilityNextStepArray(j);% これが最大のものの場合を考える ex. 2
-                    otherExpectedUtilityNextStepArray = setdiff(totalExpectedUtilityNextStepArray, totalExpectedUtilityNextStep);% [1,3,4]
-
-                    condition = Condition();
-                    for k = 1:length(otherExpectedUtilityNextStepArray)
-                        otherExpectedUtilityNextStep = otherExpectedUtilityNextStepArray(k);% 1
-                        expr = totalExpectedUtilityNextStep >= otherExpectedUtilityNextStep;
-                        condition = condition.combineAsAND(Condition(expr));% 2>1 && 2>3 && 2>4
-                    end
-                    conditions{j} = condition;
-
-                    if ~(condition.isIncluded(allConditions))
-                        allConditions{end+1} = condition;
-                    end
-                end
-            end
-            rightVec{i} = expectedUtilityNextStepArray;
-            conditionsVec{i} = conditions;
-        end
-
-        allConditions
-        save("data/right_vec/rightVec_"+string(playerIndex)+"_"+string(situationNumber)+".mat", "rightVec");
-        save("data/conditions_vec/conditionsVec_"+string(playerIndex)+"_"+string(situationNumber)+".mat", "conditionsVec");
-    end
-end
-save('data/allConditions.mat', 'allConditions');
-
-% 期待効用ベクトルと条件式ベクトルをそれぞれテキストファイルに出力する
-ExpectedUtilityHelper.writeRightVecs("data/right_vec/right_vec_summary.txt");
-Condition.writeConditions("data/conditions_vec/conditions_vec_summary.txt");
 
 
 % uniqueMaxCandidates = {};

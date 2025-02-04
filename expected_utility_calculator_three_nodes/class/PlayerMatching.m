@@ -32,14 +32,7 @@ classdef PlayerMatching
   methods
     function expectedUtilities = calculateExpectedUtilities(obj, x)
 
-      % タクシーが乗客を1ノード先に運ぶ際に得る利益
-      u = ParamsHelper.u;
-      % 乗客がマッチした時に得る効用
-      r = ParamsHelper.r;
-      % 乗客が単位時間あたりに低下する効用
-      alpha = ParamsHelper.alpha;
-      % 出現した乗客がどのノードを目的地とするかの確率
-      p_jk = ParamsHelper.p_jk;
+      [~, ~, ~, a, ~, ~, p_, u, r, ~, ~] = ParamsHelper.getSymbolicParams();
 
       expectedUtilities = sym(zeros(6, 1));
       for i = 1:length(obj.playerPairArray)
@@ -60,7 +53,7 @@ classdef PlayerMatching
             destinationNodeCandidates = setdiff(1:3, passenger.getNodeNum());
             destinationNodeLeft = destinationNodeCandidates(1);
             destinationNodeRight = destinationNodeCandidates(2);
-            expectedUtilities(playerIndexTaxi) = p_jk(passengerNode, destinationNodeLeft) * u(taxiNode, passengerNode, destinationNodeLeft) + p_jk(passengerNode, destinationNodeRight) * u(taxiNode, passengerNode, destinationNodeRight);
+            expectedUtilities(playerIndexTaxi) = p_(passengerNode, destinationNodeLeft) * u(taxiNode, passengerNode, destinationNodeLeft) + p_(passengerNode, destinationNodeRight) * u(taxiNode, passengerNode, destinationNodeRight);
           elseif isempty(passenger) && taxi.appearanceStepCount == 0
             situation = obj.getSituationAfterMatching();
             expectedUtilities(playerIndexTaxi) = x(situation.situationNumber+1, playerIndexTaxi);
@@ -73,7 +66,7 @@ classdef PlayerMatching
           waitStepCount = passenger.appearanceStepCount;
           passengerNode = passenger.getNodeNum();
           playerIndexPassenger = passenger.playerIndex;
-          expectedUtilities(playerIndexPassenger) = r(taxiNode, passengerNode) - waitStepCount * alpha(passengerNode);
+          expectedUtilities(playerIndexPassenger) = r(taxiNode, passengerNode) - waitStepCount * a(passengerNode);
         end
       end
     end

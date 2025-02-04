@@ -20,10 +20,6 @@ classdef Player
         error('playerIndex must be in 1, 2, 3, 4, 5, or 6');
       end
 
-      if appearanceStepCount < 0
-        error('appearanceStepCount must be greater than or equal to 0');
-      end
-
       % 出現するプレイヤが乗客の場合は、0より大きいappearanceStepCountは許可しない
       if ~(playerIndex == 1) && ~(playerIndex == 3) && ~(playerIndex == 5)
         if appearanceStepCount > 0
@@ -38,8 +34,8 @@ classdef Player
   end
 
   methods
-    function isequal = eq(obj1, obj2)
-      isequal = (obj1.playerIndex == obj2.playerIndex) && (obj1.appearanceStepCount == obj2.appearanceStepCount);
+    function result = eq(obj1, obj2)
+      result = (obj1.playerIndex == obj2.playerIndex) && isequal(obj1.appearanceStepCount, obj2.appearanceStepCount);
     end
   end
 

@@ -71,7 +71,7 @@ classdef Situation
   % 現在のsituationにおいて、マッチング対象プレイヤ集合をタクシーと乗客に分けてPlayerオブジェクトの配列として返す
   methods
     function [taxis, passengers] = getMatchablePlayers(obj)
-      m = ParamsHelper.m;
+      [~, ~, ~, ~, m, ~, ~, ~, ~, ~, ~] = ParamsHelper.getSymbolicParams();
       presenceSet = obj.getPresenceSet();
       potentialSet = obj.getPotentialSet();
       taxis = [];
@@ -142,7 +142,7 @@ classdef Situation
     % 現在のsituationから、乗客が出現した直後の起こりうる全てのsituationを返す
     function newSituations = createNextSituationsByOneStep(obj)
       newSituations = [];
-      destinationNodesCandidates = ParamsHelper.destinationNodesCandidates;
+      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, destinationNodesCandidates] = ParamsHelper.getSymbolicParams();
       for i = 1:length(destinationNodesCandidates)
         destinationNodesCandidate = destinationNodesCandidates(:, i);
         appearedPlayerIndices = find(destinationNodesCandidate);
