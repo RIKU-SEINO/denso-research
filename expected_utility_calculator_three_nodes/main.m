@@ -11,29 +11,81 @@ addpath('./class');
 x = ExpectedUtilityHelper.generateExpectedUtilitiesSymbolicMatrix();
 
 try
-    dataAllConditions = load('data/allConditions.mat', 'allConditions');
-    allConditions = dataAllConditions.allConditions;
+    load("data/right_vec/rightVec_1_0.mat", "rightVec");
+    load("data/conditions_vec/conditionsVec_1_0.mat", "conditionsVec");
 catch ME
     disp(ME.message);
     ExpectedUtilityHelper.saveExpectedUtilityMaterials(x);
 
     ExpectedUtilityHelper.writeRightVecs("data/right_vec/right_vec_summary.txt");
     ExpectedUtilityHelper.writeConditions("data/conditions_vec/conditions_vec_summary.txt");
-    ExpectedUtilityHelper.writeAllConditions("data/allConditions.mat");
-
-    dataAllConditions = load('data/allConditions.mat', 'allConditions');
-    allConditions = dataAllConditions.allConditions;
+    ExpectedUtilityHelper.writeAllConditions("data/allconditions_summary.txt");
 end
 
 %% 期待効用の計算
+% まず、x_v1_1, x_v2_4, x_v3_16について期待効用を計算。条件分岐がないので簡単に求められる。
+x_vec = [x(2,1); x(5,3); x(17,5)];
+Lambda_p = zeros(length(x_vec));
+b_p = zeros(length(x_vec), 1);
+playerIndices = [1,3,5]; % v1, v2, v3
+for idx = 1:length(playerIndices)
+    playerIndex = playerIndices(idx);
+    situationNumber = 2^(playerIndex-1);
+    dataRightVec = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "rightVec");
 
-% まずx_v1_1, x_v2_4, x_v3_16を求める
+    rightVec = dataRightVec.rightVec;
+    disp(q.' * cell2sym(rightVec))
+
+    M_ps = zeros(27, 3); % 0-1行列
+    c_ps = zeros(27, 1); % 定数項ベクトル
+    for i = 1:size(M_ps, 1)
+        rightVec_i = rightVec{i};
+        rightVec_i_arr = children(rightVec_i);
+        for j = 1:length(rightVec_i_arr)
+            rightVec_i_arr_j = rightVec_i_arr(j);
+            rightVec_i_arr_j = rightVec_i_arr_j{1};
+            xpsIndexInFlattenx = find(x_vec == rightVec_i_arr_j);
+            if ~any(isletter(char(rightVec_i_arr_j)))  % 数値の場合
+                c_ps(i) = c_ps(i) + rightVec_i_arr_j;
+            else % 変数が含まれている場合
+                M_ps(i, xpsIndexInFlattenx) = 1;
+            end
+        end
+    end
+
+    Lambda_p(idx, :) = q.' * M_ps;
+    b_p(idx) = q.' * c_ps;
+end
+
+inv(eye(3) - Lambda_p) * b_p
+
+
+% 次に、
 % for playerIndex = [1,3,5]
-%     s = (playerIndex - 1)^2;
-%     dataRightVec = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(s) + ".mat", "rightVec");
+%     situationNumber = 2^(playerIndex-1);
+%     dataRightVec = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "rightVec");
+
 %     rightVec = dataRightVec.rightVec;
-%     disp(q.' * cell2sym(rightVec));
+
+%     M = zeros(27, 64); % 0-1行列
+%     b = zeros(27, 1); % 定数項ベクトル
+%     for i = 1:27
+%         rightVec_i = rightVec{i};
+%         rightVec_i_arr = children(rightVec_i);
+%         for j = 1:length(rightVec_i_arr)
+%             rightVec_i_arr_j = rightVec_i_arr(j);
+%             rightVec_i_arr_j = rightVec_i_arr_j{1};
+%             xpsIndexInFlattenx = find(x(:,playerIndex) == rightVec_i_arr_j);
+%             if ~any(isletter(char(rightVec_i_arr_j)))  % 数値の場合
+%                 b(i) = b(i) + rightVec_i_arr_j;
+%             else % 変数が含まれている場合
+%                 M(i, xpsIndexInFlattenx) = 1;
+%             end
+%         end
+%     end
 % end
+
+
 
 
 
