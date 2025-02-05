@@ -287,4 +287,81 @@ classdef UtilsHelper
         end
     end
   end
+
+  % rightvecの条件分岐組み合わせに関するメソッド
+  methods (Static)
+    function [rightVecCandidates, conditionsVecCandidates] = getRightVecAndConditionsVecCandidates(rightVec, conditionsVec)
+        % 入力セル配列を調べて、条件式をグループに分ける
+        groups = {};  % グループごとの選択肢を格納するセル配列
+        num_elements = [];
+        
+        for i = 1:length(conditionsVec)
+            input = conditionsVec{i};
+            % inputの長さが2以上かつinputがgroupsに含まれていない場合
+            if length(input) >= 2 && ~any(cellfun(@(x) isequal(x, input), groups))
+                groups{end+1} = input;
+                num_elements = [num_elements, length(input)];
+            end
+        end
+
+        % {[400    x_v2_4]}    {[900    x_v2_4]}    {[500    x_v2_4]}    {[x_v2_5    900    x_v2_4]}    {[x_v2_5    400    x_v2_4]}を受け取り、
+        % 各要素の何番目のインデックスの要素を取得するかがバリエーションあるので、全て列挙
+        % 例えば、[400    x_v2_4]の場合、1, 2の2通り
+        % 例えば、[900    x_v2_4]の場合、1, 2の2通り
+        % 例えば、[500    x_v2_4]の場合、1, 2の2通り
+        % 例えば、[x_v2_5    900    x_v2_4]の場合、1, 2, 3の3通り
+        % 例えば、[x_v2_5    400    x_v2_4]の場合、1, 2, 3の3通り
+        % これを全て列挙すると、
+        % 1, 1, 1, 1, 1
+        % 2, 1, 1, 1, 1
+        % 1, 2, 1, 1, 1
+        % 2, 2, 1, 1, 1
+        % 1, 1, 2, 1, 1
+        % 2, 1, 2, 1, 1
+        % 1, 2, 2, 1, 1
+        % 2, 2, 2, 1, 1
+        % 1, 1, 1, 2, 1
+        % 2, 1, 1, 2, 1
+        % 1, 2, 1, 2, 1
+        % 2, 2, 1, 2, 1
+        % 1, 1, 2, 2, 1
+        % 2, 1, 2, 2, 1
+        % 1, 2, 2, 2, 1
+        % 2, 2, 2, 2, 1
+        % 1, 1, 1, 3, 1
+        % 2, 1, 1, 3, 1
+        % ...
+        % 2, 2, 2, 3, 3
+        % までの組み合わせが生成される
+
+        % 各配列のインデックスを作成
+        index_arrays = arrayfun(@(x) 1:x, num_elements, 'UniformOutput', false);
+
+        % インデックスの組み合わせを作成
+        [combinations{1:length(num_elements)}] = ndgrid(index_arrays{:});
+
+        % 組み合わせを一列に変換
+        combinations = cell2mat(cellfun(@(x) x(:), combinations, 'UniformOutput', false));
+
+        conditionsVecCandidates = {};
+        rightVecCandidates = {};
+        for i = 1:length(combinations)
+            combination = combinations(i, :);
+            conditionsVecCandidate = conditionsVec;
+            rightVecCandidate = rightVec;
+
+            for j = 1:length(conditionsVecCandidate)
+                if length(conditionsVecCandidate{j}) >= 2
+                    % conditionsVecCandidate{j}がgroupsの何番目にあるかidxとして取得
+                    idx = find(cellfun(@(x) isequal(x, conditionsVecCandidate{j}), groups));
+                    conditionsVecCandidate{j} = conditionsVecCandidate{j}(combination(idx));
+                    rightVecCandidate{j} = rightVecCandidate{j}(combination(idx));
+                end
+            end
+
+            conditionsVecCandidates{end+1} = conditionsVecCandidate;
+            rightVecCandidates{end+1} = rightVecCandidate;
+        end
+    end      
+  end
 end
