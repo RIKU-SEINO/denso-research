@@ -30,13 +30,22 @@ b = cell(length(x), 1);
 M = cell(length(x), 1);
 c = cell(length(x), 1);
 cE = cell(length(x), 1); % conditionExprs
+cE2 = cell(length(x), 1); % conditionExprs
 alreadySolvedVarNames = {};
 alreadySolvedVarValues = {};
 for playerIndex = 1:6
     L{playerIndex} = {}; % playerIndexを決めても条件分岐により複数のLが存在する場合があるので、cell配列にする
     L{playerIndex}{1} = zeros(length(x)); % 0-1行列
+    L_default = L;
+
     b{playerIndex} = {}; % playerIndexを決めても条件分岐により複数のbが存在する場合があるので、cell配列にする
     b{playerIndex}{1} = zeros(length(x), 1); % 定数項ベクトル
+    b_default = b;
+
+    cE2{playerIndex} = {}; % playerIndexを決めても条件分岐により複数のcEが存在する場合があるので、cell配列にする
+    cE2{playerIndex}{1} = symtrue; % 条件式
+    cE2_default = cE2;
+
     for situationNumber = 0:63
         M{playerIndex, situationNumber+1} = {}; % playerIndex, situationNumberを決めても条件分岐により複数のMが存在する場合があるので、cell配列にする
         M{playerIndex, situationNumber+1}{1} = zeros(27, length(x)); % 0-1行列
@@ -55,13 +64,13 @@ end
 % 次に、x_v1_1, x_v2_4, x_v3_16について期待効用を計算。条件分岐がないので簡単に求められる。
 for playerIndex = 1:6
 
-    L_p = L{playerIndex}{1}; % x_p = L_p * x_p + b_pのL_p = zeros(64, 64)
-    b_p = b{playerIndex}{1}; % x_p = L_p * x_p + b_pのb_p = zeros(64, 1)
+    L_p = L_default{playerIndex}{1}; % x_p = L_p * x_p + b_pのL_p = zeros(64, 64)
+    b_p = b_default{playerIndex}{1}; % x_p = L_p * x_p + b_pのb_p = zeros(64, 1)
 
     for situationNumber = 0:63
 
-        M_ps = M{playerIndex, situationNumber+1}{1}; % x_ps = M_ps * x + c_psのM_ps = zeros(27, 64)
-        c_ps = c{playerIndex, situationNumber+1}{1}; % x_ps = M_ps * x + c_psのc_ps = zeros(27, 1)
+        M_ps = M_default{playerIndex, situationNumber+1}{1}; % x_ps = M_ps * x + c_psのM_ps = zeros(27, 64)
+        c_ps = c_default{playerIndex, situationNumber+1}{1}; % x_ps = M_ps * x + c_psのc_ps = zeros(27, 1)
 
         if ismember(playerIndex, [1,3,5]) && (situationNumber == 2^(playerIndex-1))
 
@@ -106,15 +115,15 @@ for playerIndex = 1:6
     end
 end
 
-M = M_default;
-c = c_default;
-cE = cE_default;
+M_default = M;
+c_default = c;
+cE_default = cE;
+L_default = L;
+b_default = b;
+cE2_default = cE2;
 
 % 次に、x_v1_5, x_v2_5を求める。これらは条件分岐があるので、条件分岐を考慮して期待効用を計算する。
 for playerIndex = 1:6
-
-    L_p = L{playerIndex}{1}; % x_p = L_p * x_p + b_pのL_p = zeros(64, 64)
-    b_p = b{playerIndex}{1}; % x_p = L_p * x_p + b_pのb_p = zeros(64, 1)
     
     for situationNumber = 0:63
 
@@ -188,6 +197,34 @@ for playerIndex = 1:6
                 M{playerIndex, situationNumber+1}{ii} = M_ps;
                 c{playerIndex, situationNumber+1}{ii} = c_ps;
                 cE{playerIndex, situationNumber+1}{ii} = cE_ps;
+
+                L{playerIndex}{ii} = L_default{playerIndex}{1};
+                L{playerIndex}{ii}(situationNumber+1, :) = q.' * M_ps;
+
+                b{playerIndex}{ii} = b_default{playerIndex}{1};
+                b{playerIndex}{ii}(situationNumber+1) = q.' * c_ps;
+            end
+        end
+    end
+end
+
+for playerIndex = 1:6
+    for situationNumber = 0:63
+        if ismember(playerIndex, [1,3]) && (situationNumber == 5)
+
+            for ii = 1:length(M{playerIndex, situationNumber+1})
+                M_ps = M{playerIndex, situationNumber+1}{ii};
+                c_ps = c{playerIndex, situationNumber+1}{ii};
+                cE_ps = cE{playerIndex, situationNumber+1}{ii};
+                L_p = L{playerIndex}{ii};
+                b_p = b{playerIndex}{ii};
+
+                sol = (I - L_p) \ b_p;
+
+
+                disp('playerIndex: ' + string(playerIndex) + ', situationNumber: ' + string(situationNumber) + ', ii: ' + string(ii));
+                sol.'
+                cE_ps
             end
         end
     end
