@@ -208,4 +208,35 @@ classdef ExpectedUtilityHelper
             disp(['結果がファイルに保存されました: ', outputPath]);
         end        
     end
+
+    methods (Static)
+        % 期待効用の方程式を構成する要素を定義する
+        function [I, L, b, M, c, cE] = generateEquationElements(x)
+            I = eye(length(x));
+            L = {};
+            b = {};
+            M = {};
+            c = {};
+            cE = {};
+
+            for playerIndex = 1:6
+                L{playerIndex} = {}; % playerIndexを決めても条件分岐により複数のLが存在する場合があるので、cell配列にする
+                L{playerIndex}{1} = zeros(length(x)); % 0-1行列
+            
+                b{playerIndex} = {}; % playerIndexを決めても条件分岐により複数のbが存在する場合があるので、cell配列にする
+                b{playerIndex}{1} = zeros(length(x), 1); % 定数項ベクトル
+            
+                for situationNumber = 0:63
+                    M{playerIndex, situationNumber+1} = {}; % playerIndex, situationNumberを決めても条件分岐により複数のMが存在する場合があるので、cell配列にする
+                    M{playerIndex, situationNumber+1}{1} = zeros(27, length(x)); % 0-1行列
+            
+                    c{playerIndex, situationNumber+1} = {}; % playerIndex, situationNumberを決めても条件分岐により複数のcが存在する場合があるので、cell配列にする
+                    c{playerIndex, situationNumber+1}{1} = zeros(27, 1); % 定数項ベクトル
+            
+                    cE{playerIndex, situationNumber+1} = {}; % playerIndex, situationNumberを決める際に、条件分岐により複数のcEが存在する場合があるので、cell配列にする
+                    cE{playerIndex, situationNumber+1}{1} = symtrue; % 条件式
+                end
+            end
+        end
+    end
 end
