@@ -23,45 +23,17 @@ catch ME
 end
 
 %% 期待効用の計算
-% まず、方程式を構成する要素を定義する
-I = eye(length(x));
-L = cell(length(x), 1);
-b = cell(length(x), 1);
-M = cell(length(x), 1);
-c = cell(length(x), 1);
-cE = cell(length(x), 1); % conditionExprs
-cE2 = cell(length(x), 1); % conditionExprs
+%% 1. まず、方程式を構成する要素を定義する
+[I, L, b, M, c, cE] = ExpectedUtilityHelper.generateEquationElements(x);
+L_default = L;
+b_default = b;
+M_default = M;
+c_default = c;
+
 alreadySolvedVarNames = {};
 alreadySolvedVarValues = {};
-for playerIndex = 1:6
-    L{playerIndex} = {}; % playerIndexを決めても条件分岐により複数のLが存在する場合があるので、cell配列にする
-    L{playerIndex}{1} = zeros(length(x)); % 0-1行列
-    L_default = L;
 
-    b{playerIndex} = {}; % playerIndexを決めても条件分岐により複数のbが存在する場合があるので、cell配列にする
-    b{playerIndex}{1} = zeros(length(x), 1); % 定数項ベクトル
-    b_default = b;
-
-    cE2{playerIndex} = {}; % playerIndexを決めても条件分岐により複数のcEが存在する場合があるので、cell配列にする
-    cE2{playerIndex}{1} = symtrue; % 条件式
-    cE2_default = cE2;
-
-    for situationNumber = 0:63
-        M{playerIndex, situationNumber+1} = {}; % playerIndex, situationNumberを決めても条件分岐により複数のMが存在する場合があるので、cell配列にする
-        M{playerIndex, situationNumber+1}{1} = zeros(27, length(x)); % 0-1行列
-        M_default = M;
-
-        c{playerIndex, situationNumber+1} = {}; % playerIndex, situationNumberを決めても条件分岐により複数のcが存在する場合があるので、cell配列にする
-        c{playerIndex, situationNumber+1}{1} = zeros(27, 1); % 定数項ベクトル
-        c_default = c;
-
-        cE{playerIndex, situationNumber+1} = {}; % playerIndex, situationNumberを決める際に、条件分岐により複数のcEが存在する場合があるので、cell配列にする
-        cE{playerIndex, situationNumber+1}{1} = symtrue; % 条件式
-        cE_default = cE;
-    end
-end
-
-% 次に、x_v1_1, x_v2_4, x_v3_16について期待効用を計算。条件分岐がないので簡単に求められる。
+%% 2. 次に、x_v1_1, x_v2_4, x_v3_16について期待効用を計算。条件分岐がないので簡単に求められる。
 for playerIndex = 1:6
 
     L_p = L_default{playerIndex}{1}; % x_p = L_p * x_p + b_pのL_p = zeros(64, 64)
@@ -109,7 +81,6 @@ for playerIndex = 1:6
         if ismember(playerIndex, [1,3,5]) && (situationNumber == 2^(playerIndex-1))
             sol = (I - L{playerIndex}{1}) \ b{playerIndex}{1};
             alreadySolvedVarNames{end+1} = char(x(situationNumber + 1, playerIndex));
-            x(situationNumber + 1, playerIndex) = sol(situationNumber + 1);
             alreadySolvedVarValues{end+1} = sol(situationNumber + 1);
         end
     end
@@ -120,116 +91,297 @@ c_default = c;
 cE_default = cE;
 L_default = L;
 b_default = b;
-cE2_default = cE2;
 
-% 次に、x_v1_5, x_v2_5を求める。これらは条件分岐があるので、条件分岐を考慮して期待効用を計算する。
-for playerIndex = 1:6
-    
-    for situationNumber = 0:63
+%% 3. 次のペアについて期待効用を同時に求める
+% 3-1. x_v1_5, x_v2_5
+% 3-2. x_v1_17, x_v3_17
+% 3-3. x_v2_20, x_v3_20
+pairs = {
+    [1,3], 5;
+    [1,5], 17;
+    [3,5], 20;
+};
+for pairIdx = 1:length(pairs)
+    currentPlayerIndices = pairs{pairIdx, 1};
+    currentSituationNumber = pairs{pairIdx, 2};
 
-        if ismember(playerIndex, [1,3]) && (situationNumber == 5)
-            dataRightVec = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "rightVec");
-            dataConditionsVec = load("data/conditions_vec/conditionsVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "conditionsVec");
-            rightVec = dataRightVec.rightVec;
-            conditionsVec = dataConditionsVec.conditionsVec;
+    for playerIndex = 1:6
+        
+        for situationNumber = 0:63
 
-            newRightVec = {};
-            newConditionExprsVec = {};
+            if ismember(playerIndex, currentPlayerIndices) && (situationNumber == currentSituationNumber)
+                dataRightVec = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "rightVec");
+                dataConditionsVec = load("data/conditions_vec/conditionsVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "conditionsVec");
+                rightVec = dataRightVec.rightVec;
+                conditionsVec = dataConditionsVec.conditionsVec;
 
-            for i = 1:length(rightVec)
-                rightVec_i = simplify(subs(rightVec{i}, alreadySolvedVarNames, alreadySolvedVarValues));
-                newRightVec_i = [];
-                conditionsVec_i = conditionsVec{i};
-                newConditionExprsVec_i = [];
-                for j = 1:length(conditionsVec_i)
-                    condition = conditionsVec_i{j};
-                    if isempty(condition)
-                        newRightVec_i = rightVec_i;
-                        newConditionExprsVec_i = symtrue;
-                        break;
-                    end
-
-                    newCondExpr = simplify(subs(condition.expr, alreadySolvedVarNames, alreadySolvedVarValues));
-
-                    if isequal(newCondExpr, symtrue)
-                        newRightVec_i = rightVec_i(j);
-                        newConditionExprsVec_i = symtrue;
-                        break;
-                    elseif isequal(newCondExpr, symfalse)
-                        continue;
-                    else
-                        newRightVec_i = [newRightVec_i, rightVec_i(j)];
-                        newConditionExprsVec_i = [newConditionExprsVec_i, newCondExpr];
-                    end
-                end
-
-                newRightVec{end+1, 1} = newRightVec_i;
-                newConditionExprsVec{end+1, 1} = newConditionExprsVec_i;
-            end
-
-            [newRightVecCandidates, newConditionExprsVecCandidates] = UtilsHelper.getRightVecAndConditionsVecCandidates(newRightVec, newConditionExprsVec);
-
-            for ii = 1:length(newRightVecCandidates)
-                newRightVecCandidate = newRightVecCandidates{ii};
-                newConditionExprsVecCandidate = newConditionExprsVecCandidates{ii};
-
-                M_ps = M_default{playerIndex, situationNumber+1}{1}; % x_ps = M_ps * x + c_psのM_ps = zeros(27, 64)
-                c_ps = c_default{playerIndex, situationNumber+1}{1}; % x_ps = M_ps * x + c_psのc_ps = zeros(27, 1)
-                cE_ps = cE_default{playerIndex, situationNumber+1}{1}; % 条件式
+                newRightVec = {};
+                newConditionExprsVec = {};
 
                 for i = 1:length(rightVec)
-                    rightVec_i = newRightVecCandidate{i};
-                    conditionExprVec_i = newConditionExprsVecCandidate{i};
-                    rightVec_i_arr = children(rightVec_i);
-                    for j = 1:length(rightVec_i_arr)
-                        rightVec_i_arr_j = rightVec_i_arr(j);
-                        rightVec_i_arr_j = rightVec_i_arr_j{1};
-                        xpsIndexInFlattenx = find(x(:,playerIndex) == rightVec_i_arr_j);
-                        if ~any(isletter(char(rightVec_i_arr_j)))  % 数値の場合
-                            c_ps(i) = c_ps(i) + rightVec_i_arr_j;
-                        else % 変数が含まれている場合
-                            M_ps(i, xpsIndexInFlattenx) = 1;
+                    rightVec_i = simplify(subs(rightVec{i}, alreadySolvedVarNames, alreadySolvedVarValues));
+                    newRightVec_i = [];
+                    conditionsVec_i = conditionsVec{i};
+                    newConditionExprsVec_i = [];
+                    for j = 1:length(conditionsVec_i)
+                        condition = conditionsVec_i{j};
+                        if isempty(condition)
+                            newRightVec_i = rightVec_i;
+                            newConditionExprsVec_i = symtrue;
+                            break;
+                        end
+
+                        newCondExpr = simplify(subs(condition.expr, alreadySolvedVarNames, alreadySolvedVarValues));
+
+                        if isequal(newCondExpr, symtrue)
+                            newRightVec_i = simplify(subs(rightVec_i(j), alreadySolvedVarNames, alreadySolvedVarValues));
+                            newConditionExprsVec_i = symtrue;
+                            break;
+                        elseif isequal(newCondExpr, symfalse)
+                            continue;
+                        else
+                            newRightVec_i = [newRightVec_i, rightVec_i(j)];
+                            newConditionExprsVec_i = [newConditionExprsVec_i, newCondExpr];
                         end
                     end
-                    cE_ps = simplify(and(cE_ps, conditionExprVec_i));
+
+                    newRightVec{end+1, 1} = newRightVec_i;
+                    newConditionExprsVec{end+1, 1} = newConditionExprsVec_i;
                 end
 
-                M{playerIndex, situationNumber+1}{ii} = M_ps;
-                c{playerIndex, situationNumber+1}{ii} = c_ps;
-                cE{playerIndex, situationNumber+1}{ii} = cE_ps;
+                [newRightVecCandidates, newConditionExprsVecCandidates] = UtilsHelper.getRightVecAndConditionsVecCandidates(newRightVec, newConditionExprsVec);
 
-                L{playerIndex}{ii} = L_default{playerIndex}{1};
-                L{playerIndex}{ii}(situationNumber+1, :) = q.' * M_ps;
+                for ii = 1:length(newRightVecCandidates)
+                    newRightVecCandidate = newRightVecCandidates{ii};
+                    newConditionExprsVecCandidate = newConditionExprsVecCandidates{ii};
 
-                b{playerIndex}{ii} = b_default{playerIndex}{1};
-                b{playerIndex}{ii}(situationNumber+1) = q.' * c_ps;
+                    M_ps = M_default{playerIndex, situationNumber+1}{1}; % x_ps = M_ps * x + c_psのM_ps = zeros(27, 64)
+                    c_ps = c_default{playerIndex, situationNumber+1}{1}; % x_ps = M_ps * x + c_psのc_ps = zeros(27, 1)
+                    cE_ps = cE_default{playerIndex, situationNumber+1}{1}; % 条件式
+
+                    for i = 1:length(rightVec)
+                        rightVec_i = newRightVecCandidate{i};
+                        conditionExprVec_i = newConditionExprsVecCandidate{i};
+                        rightVec_i_arr = children(rightVec_i);
+                        for j = 1:length(rightVec_i_arr)
+                            rightVec_i_arr_j = rightVec_i_arr(j);
+                            rightVec_i_arr_j = rightVec_i_arr_j{1};
+                            xpsIndexInFlattenx = find(x(:,playerIndex) == rightVec_i_arr_j);
+                            if ~any(isletter(char(rightVec_i_arr_j)))  % 数値の場合
+                                c_ps(i) = c_ps(i) + rightVec_i_arr_j;
+                            else % 変数が含まれている場合
+                                M_ps(i, xpsIndexInFlattenx) = 1;
+                            end
+                        end
+                        cE_ps = simplify(and(cE_ps, conditionExprVec_i));
+                    end
+
+                    M{playerIndex, situationNumber+1}{ii} = M_ps;
+                    c{playerIndex, situationNumber+1}{ii} = c_ps;
+                    cE{playerIndex, situationNumber+1}{ii} = cE_ps;
+
+                    L{playerIndex}{ii} = L_default{playerIndex}{1};
+                    L{playerIndex}{ii}(situationNumber+1, :) = q.' * M_ps;
+
+                    b{playerIndex}{ii} = b_default{playerIndex}{1};
+                    b{playerIndex}{ii}(situationNumber+1) = q.' * c_ps;
+                end
             end
         end
+    end
+
+    cE_set = {};
+    for playerIndex = 1:6
+        for situationNumber = 0:63
+            if ismember(playerIndex, currentPlayerIndices) && (situationNumber == currentSituationNumber)
+                for ii = 1:length(M{playerIndex, situationNumber+1})
+                    cE_ps = cE{playerIndex, situationNumber+1}{ii};
+                    % cE_setにcE_psが含まれていないなら、cE_setに追加
+                    if ~ismember(cE_ps, cE_set)
+                        cE_set{end+1} = cE_ps;
+                    end
+                end
+            end
+        end
+    end
+
+    % もしcE_setの長さが2以上であれば、symtrueを削除
+    if length(cE_set) >= 2
+        for cEIndex = 1:length(cE_set)
+            cE_ps = cE_set{cEIndex};
+            if isequal(cE_ps, symtrue)
+                cE_set = cE_set([1:cEIndex-1, cEIndex+1:end]);
+            end
+        end
+    end
+
+    for cEIndex = 1:length(cE_set)
+        cE_ps = cE_set{cEIndex};
+        disp('-------------------');
+        disp("条件式: ");
+        disp(cE_ps);
+        varNames = {};
+        varValues = {};
+
+        for playerIndex = 1:6
+            for situationNumber = 0:63
+                if ismember(playerIndex, currentPlayerIndices) && (situationNumber == currentSituationNumber)
+                    ii = find(cE{playerIndex, situationNumber+1} == cE_ps);
+                    if ~isempty(ii)
+
+                        L_p = L{playerIndex}{ii}; % x_p = L_p * x_p + b_pのL_p = zeros(64, 64)
+                        b_p = b{playerIndex}{ii}; % x_p = L_p * x_p + b_pのb_p = zeros(64, 1)
+
+                        sol = (I - L_p) \ b_p;
+
+                        varNames{end+1} = char(x(situationNumber + 1, playerIndex));
+                        varValues{end+1} = sol(situationNumber + 1);
+                    end
+                end
+            end
+        end
+
+        result = simplify(subs(cE_ps, varNames, varValues));
+        if isequal(result, symtrue)
+            disp("条件式は成立します");
+            alreadySolvedVarNames = [alreadySolvedVarNames, varNames];
+            alreadySolvedVarValues = [alreadySolvedVarValues, varValues];
+
+            M_default = M;
+            c_default = c;
+            cE_default = cE;
+            L_default = L;
+            b_default = b;
+        else
+            disp("条件式は成立しません");
+        end
+    end
+end
+
+%% 4. 最後に、まだ計算されていない期待効用を計算する。条件分岐が依存している期待効用は1.〜3.で計算されているので、それらを利用する。
+
+for playerIndex = 1:6
+
+    L{playerIndex}{1} = L_default{playerIndex}{1};
+    b{playerIndex}{1} = b_default{playerIndex}{1};
+
+    for situationNumber = 0:63
+
+        if (ismember(playerIndex, [1,3,5]) && (situationNumber == 2^(playerIndex-1))) || ...
+            (ismember(playerIndex, [1,3]) && (situationNumber == 5)) || ...
+            (ismember(playerIndex, [1,5]) && (situationNumber == 17)) || ...
+            (ismember(playerIndex, [3,5]) && (situationNumber == 20))
+            continue; % 既に計算済みのためスキップ
+        end
+
+        disp('-------------------');
+        disp("playerIndex: " + playerIndex + ", situationNumber: " + situationNumber);
+
+        dataRightVec = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "rightVec");
+        dataConditionsVec = load("data/conditions_vec/conditionsVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "conditionsVec");
+
+        rightVec = dataRightVec.rightVec;
+        conditionsVec = dataConditionsVec.conditionsVec;
+
+        newRightVec = {};
+        newConditionExprsVec = {};
+
+        for i = 1:length(rightVec)
+            rightVec_i = simplify(subs(rightVec{i}, alreadySolvedVarNames, alreadySolvedVarValues));
+            newRightVec_i = [];
+            conditionsVec_i = conditionsVec{i};
+            newConditionExprsVec_i = [];
+            for j = 1:length(conditionsVec_i)
+                condition = conditionsVec_i{j};
+                if isempty(condition)
+                    newRightVec_i = rightVec_i;
+                    newConditionExprsVec_i = symtrue;
+                    break;
+                end
+
+                newCondExpr = simplify(subs(condition.expr, alreadySolvedVarNames, alreadySolvedVarValues));
+
+                if isequal(newCondExpr, symtrue)
+                    newRightVec_i = simplify(subs(rightVec_i(j), alreadySolvedVarNames, alreadySolvedVarValues));
+                    newConditionExprsVec_i = symtrue;
+                    break;
+                elseif isequal(newCondExpr, symfalse)
+                    continue;
+                else
+                    error('条件式が成立するか否かが決定されていません。')
+                end
+            end
+
+            newRightVec{end+1, 1} = newRightVec_i;
+            newConditionExprsVec{end+1, 1} = newConditionExprsVec_i;
+        end
+
+        M_ps = M_default{playerIndex, situationNumber+1}{1}; % x_ps = M_ps * x + c_psのM_ps = zeros(27, 64)
+        c_ps = c_default{playerIndex, situationNumber+1}{1}; % x_ps = M_ps * x + c_psのc_ps = zeros(27, 1)
+
+        for i = 1:length(newRightVec)
+            rightVec_i = newRightVec{i};
+            conditionExprVec_i = newConditionExprsVec{i};
+            rightVec_i_arr = children(rightVec_i);
+            for j = 1:length(rightVec_i_arr)
+                rightVec_i_arr_j = rightVec_i_arr(j);
+                rightVec_i_arr_j = rightVec_i_arr_j{1};
+                xpsIndexInFlattenx = find(x(:,playerIndex) == rightVec_i_arr_j);
+                if ~any(isletter(char(rightVec_i_arr_j)))  % 数値の場合
+                    c_ps(i) = c_ps(i) + rightVec_i_arr_j;
+                else % 変数が含まれている場合
+                    M_ps(i, xpsIndexInFlattenx) = 1;
+                end
+            end
+
+            cE_ps = symtrue;
+        end
+
+        M{playerIndex, situationNumber+1}{1} = M_ps;
+        c{playerIndex, situationNumber+1}{1} = c_ps;
+        cE{playerIndex, situationNumber+1}{1} = cE_ps;
+
+        L{playerIndex}{1}(situationNumber+1, :) = q.' * M_ps;
+
+        b{playerIndex}{1}(situationNumber+1) = q.' * c_ps;
     end
 end
 
 for playerIndex = 1:6
     for situationNumber = 0:63
-        if ismember(playerIndex, [1,3]) && (situationNumber == 5)
-
-            for ii = 1:length(M{playerIndex, situationNumber+1})
-                M_ps = M{playerIndex, situationNumber+1}{ii};
-                c_ps = c{playerIndex, situationNumber+1}{ii};
-                cE_ps = cE{playerIndex, situationNumber+1}{ii};
-                L_p = L{playerIndex}{ii};
-                b_p = b{playerIndex}{ii};
-
-                sol = (I - L_p) \ b_p;
-
-
-                disp('playerIndex: ' + string(playerIndex) + ', situationNumber: ' + string(situationNumber) + ', ii: ' + string(ii));
-                sol.'
-                cE_ps
-            end
+        if (ismember(playerIndex, [1,3,5]) && (situationNumber == 2^(playerIndex-1))) || ...
+            (ismember(playerIndex, [1,3]) && (situationNumber == 5)) || ...
+            (ismember(playerIndex, [1,5]) && (situationNumber == 17)) || ...
+            (ismember(playerIndex, [3,5]) && (situationNumber == 20))
+            continue; % 既に計算済みのためスキップ
         end
+
+        disp('-------------------');
+        disp("playerIndex: " + playerIndex + ", situationNumber: " + situationNumber);
+
+        L_p = L{playerIndex}{1}; % x_p = L_p * x_p + b_pのL_p = zeros(64, 64)
+        b_p = b{playerIndex}{1}; % x_p = L_p * x_p + b_pのb_p = zeros(64, 1)
+
+        sol = (I - L_p) \ b_p;
+
+        disp(char(x(situationNumber + 1, playerIndex)) + " = " + sol(situationNumber + 1));
+
+        alreadySolvedVarNames = [alreadySolvedVarNames, char(x(situationNumber + 1, playerIndex))];
+        alreadySolvedVarValues = [alreadySolvedVarValues, sol(situationNumber + 1)];
     end
 end
 
+%% 5. 結果を保存
+vars = containers.Map();
+for playerIndex = 1:6
+    for situationNumber = 0:63
+        x_ps_char = char(x(situationNumber + 1, playerIndex));
+        idx = find(strcmp(alreadySolvedVarNames, x_ps_char));
+        value = alreadySolvedVarValues{idx};
+        vars(x_ps_char) = value;
+    end
+end
+save('data/sol/solution.mat', 'vars')
 
 % Lambda_p = zeros(length(x_vec));
 % b_p = zeros(length(x_vec), 1);
