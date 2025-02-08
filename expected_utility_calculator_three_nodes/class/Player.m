@@ -61,4 +61,25 @@ classdef Player
       end
     end
   end
+
+  methods
+    %　プレイヤ名を返す
+    function result = getName(obj)
+      if obj.playerIndex == 1
+        result = 'v1';
+      elseif obj.playerIndex == 2
+        result = 'ps1';
+      elseif obj.playerIndex == 3
+        result = 'v2';
+      elseif obj.playerIndex == 4
+        result = 'ps2';
+      elseif obj.playerIndex == 5
+        result = 'v3';
+      elseif obj.playerIndex == 6
+        result = 'ps3';
+      else
+        result = 'unknown';
+      end
+    end
+  end
 end

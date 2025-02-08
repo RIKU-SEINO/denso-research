@@ -11,19 +11,30 @@ addpath('./class');
 x = ExpectedUtilityHelper.generateExpectedUtilitiesSymbolicMatrix();
 
 try
-    load("data/right_vec/rightVec_1_0.mat", "rightVec");
-    load("data/conditions_vec/conditionsVec_1_0.mat", "conditionsVec");
+    if ~exist('rightVecs', 'var') || ~exist('conditionsVecs', 'var') || ~exist('allPlayerMatchings', 'var') || ~exist('allSocialExpectedUtilities', 'var')
+        
+        disp("data/materials.matを読み込みます");
+        dataMaterials = load("data/materials.mat", 'rightVecs', 'conditionsVecs');
+        rightVecs = dataMaterials.rightVecs;
+        conditionsVecs = dataMaterials.conditionsVecs;
+
+        disp("data/playerMatchings.matを読み込みます");
+        dataPlayerMatchings = load("data/playerMatchings.mat", 'allPlayerMatchings', 'allSocialExpectedUtilities');
+        allPlayerMatchings = dataPlayerMatchings.allPlayerMatchings;
+        allSocialExpectedUtilities = dataPlayerMatchings.allSocialExpectedUtilities;
+    end
 catch ME
     disp(ME.message);
-    ExpectedUtilityHelper.saveExpectedUtilityMaterials(x);
+    [rightVecs, conditionsVecs, allPlayerMatchings, allSocialExpectedUtilities] = ExpectedUtilityHelper.saveExpectedUtilityMaterials(x);
 
-    ExpectedUtilityHelper.writeRightVecs("data/right_vec/right_vec_summary.txt");
-    ExpectedUtilityHelper.writeConditions("data/conditions_vec/conditions_vec_summary.txt");
+    ExpectedUtilityHelper.writeRightVecs("data/right_vec_summary.txt");
+    ExpectedUtilityHelper.writeConditions("data/conditions_vec_summary.txt");
     ExpectedUtilityHelper.writeAllConditions("data/allconditions_summary.txt");
 end
 
 %% 期待効用の計算
 %% 1. まず、方程式を構成する要素を定義する
+disp("方程式を構成する要素を定義します");
 [I, L, b, M, c, cE] = ExpectedUtilityHelper.generateEquationElements(x);
 L_default = L;
 b_default = b;
@@ -34,6 +45,7 @@ alreadySolvedVarNames = {};
 alreadySolvedVarValues = {};
 
 %% 2. 次に、x_v1_1, x_v2_4, x_v3_16について期待効用を計算。条件分岐がないので簡単に求められる。
+disp("x_v1_1, x_v2_4, x_v3_16について期待効用を計算します");
 for playerIndex = 1:6
 
     L_p = L_default{playerIndex}{1}; % x_p = L_p * x_p + b_pのL_p = zeros(64, 64)
@@ -46,8 +58,7 @@ for playerIndex = 1:6
 
         if ismember(playerIndex, [1,3,5]) && (situationNumber == 2^(playerIndex-1))
 
-            dataRightVec = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "rightVec");
-            rightVec = dataRightVec.rightVec;
+            rightVec = rightVecs{playerIndex, situationNumber+1};
 
             for i = 1:size(M_ps, 1)
                 rightVec_i = rightVec{i};
@@ -96,11 +107,14 @@ b_default = b;
 % 3-1. x_v1_5, x_v2_5
 % 3-2. x_v1_17, x_v3_17
 % 3-3. x_v2_20, x_v3_20
+
+disp("条件分岐を含む期待効用を計算します");
 pairs = {
     [1,3], 5;
     [1,5], 17;
     [3,5], 20;
 };
+
 for pairIdx = 1:length(pairs)
     currentPlayerIndices = pairs{pairIdx, 1};
     currentSituationNumber = pairs{pairIdx, 2};
@@ -110,10 +124,9 @@ for pairIdx = 1:length(pairs)
         for situationNumber = 0:63
 
             if ismember(playerIndex, currentPlayerIndices) && (situationNumber == currentSituationNumber)
-                dataRightVec = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "rightVec");
-                dataConditionsVec = load("data/conditions_vec/conditionsVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "conditionsVec");
-                rightVec = dataRightVec.rightVec;
-                conditionsVec = dataConditionsVec.conditionsVec;
+
+                rightVec = rightVecs{playerIndex, situationNumber+1};
+                conditionsVec = conditionsVecs{playerIndex, situationNumber+1};
 
                 newRightVec = {};
                 newConditionExprsVec = {};
@@ -259,6 +272,7 @@ for pairIdx = 1:length(pairs)
 end
 
 %% 4. 最後に、まだ計算されていない期待効用を計算する。条件分岐が依存している期待効用は1.〜3.で計算されているので、それらを利用する。
+disp("残りの期待効用を計算します");
 
 for playerIndex = 1:6
 
@@ -277,11 +291,8 @@ for playerIndex = 1:6
         disp('-------------------');
         disp("playerIndex: " + playerIndex + ", situationNumber: " + situationNumber);
 
-        dataRightVec = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "rightVec");
-        dataConditionsVec = load("data/conditions_vec/conditionsVec_" + string(playerIndex) + "_" + string(situationNumber) + ".mat", "conditionsVec");
-
-        rightVec = dataRightVec.rightVec;
-        conditionsVec = dataConditionsVec.conditionsVec;
+        rightVec = rightVecs{playerIndex, situationNumber+1};
+        conditionsVec = conditionsVecs{playerIndex, situationNumber+1};
 
         newRightVec = {};
         newConditionExprsVec = {};
@@ -371,7 +382,7 @@ for playerIndex = 1:6
     end
 end
 
-%% 5. 結果を保存
+%% 5. 期待効用計算結果を保存
 vars = containers.Map();
 for playerIndex = 1:6
     for situationNumber = 0:63
@@ -381,7 +392,86 @@ for playerIndex = 1:6
         vars(x_ps_char) = value;
     end
 end
-save('data/sol/solution.mat', 'vars')
+save('data/solution.mat', 'vars')
+
+%% 6. 期待効用結果を表示
+figure;  % figureを1つだけ作成
+for situationNumber = 0:63
+    % 各状況における各プレイヤの期待効用を、棒グラフで表示
+
+    situation = Situation(situationNumber);
+
+    playerNames = {};
+    values = [];
+    for playerIndex = 1:6
+        x_ps_char = char(x(situationNumber + 1, playerIndex));
+        % フォーマット変換: x_vi_3 -> x_{vi,3}, x_ps3_4 -> x_{ps3,4}
+        x_ps_char = regexprep(x_ps_char, '_(\d+)_(\d+)$', '_{$1,$2}');
+        playerNames{end+1} = regexprep(x_ps_char, '_([a-zA-Z0-9]+)_(\d+)$', '_{$1}');
+
+        % 値の取得
+        idx = find(strcmp(alreadySolvedVarNames, char(x(situationNumber + 1, playerIndex))));
+        if situation.isPlayerPresent(playerIndex)
+            value = alreadySolvedVarValues{idx};
+        else
+            value = 0;
+        end
+        values = [values, value];
+    end
+
+    % 8×8 のグリッドでサブプロットを作成
+    subplot(8, 8, situationNumber + 1);
+    bar(values);
+
+    for k = 1:length(values)
+        if values(k) == 0
+            displayValue = "";
+        else
+            displayValue = num2str(values(k));
+        end
+        text(k, values(k) + 0.05 * max(values), displayValue, ...
+            'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 5);
+    end
+
+    presentPlayerNames = situation.getPresentPlayerNames();
+    if isempty(presentPlayerNames)
+        presentPlayerNames = "None";
+    end
+    title(situationNumber + ": " + presentPlayerNames);
+    xticklabels(playerNames);
+    xtickangle(0);
+    ylim([min(cell2mat(alreadySolvedVarValues)) 1000+max(cell2mat(alreadySolvedVarValues))]);
+end
+
+%% 7. 決定された最適マッチングを表示
+for playerIndex = 1:6
+    for situationNumber = 0:63
+        situation = Situation(situationNumber);
+
+        if ~situation.isPlayerPresent(playerIndex)
+            continue;
+        end
+        nextSituations = situation.createNextSituationsByOneStep();
+        for i = 1:length(nextSituations)
+            nextSituation = nextSituations(i);
+            socialUtilities = allSocialExpectedUtilities{playerIndex, situationNumber+1, i};
+            playerMatchings = allPlayerMatchings{playerIndex, situationNumber+1, i};
+
+            [maxValue, maxIndex] = max(subs(socialUtilities, alreadySolvedVarNames, alreadySolvedVarValues));
+
+            optimalPlayerMatching = playerMatchings(maxIndex);
+
+            disp('-------------------');
+            disp("playerIndex: " + playerIndex + ", situationNumber: " + situationNumber + ", nextSituationNumber: " + nextSituation.situationNumber);
+            disp("Optimal Player Matching: ");
+            disp(optimalPlayerMatching.toString());
+            disp("Social Expected Utility: ");
+            disp(maxValue);
+        end
+    end
+end
+
+
 
 % Lambda_p = zeros(length(x_vec));
 % b_p = zeros(length(x_vec), 1);

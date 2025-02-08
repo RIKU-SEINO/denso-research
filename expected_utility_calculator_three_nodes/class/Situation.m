@@ -194,4 +194,18 @@ classdef Situation
       end
     end
   end
+
+  methods
+    % 現時点で出現しているプレイヤをプレイや名前の配列として返す
+    function playerNames = getPresentPlayerNames(obj)
+      presenceSet = obj.getPresenceSet();
+      playerNames = [];
+      for playerIndex = 1:6
+        if presenceSet(playerIndex) == 1
+          player = Player(playerIndex, 0, 0);
+          playerNames = [playerNames, player.getName(), ','];
+        end
+      end
+    end
+  end
 end

@@ -20,8 +20,12 @@ classdef ExpectedUtilityHelper
     end
 
     methods (Static)
-        function saveExpectedUtilityMaterials(x)
+        function [rightVecs, conditionsVecs, allPlayerMatchings, allSocialExpectedUtilities] = saveExpectedUtilityMaterials(x)
             allConditions = {};
+            rightVecs = {};
+            conditionsVecs = {};
+            allPlayerMatchings = {};
+            allSocialExpectedUtilities = {};
             for playerIndex = 1:size(x,2)
                 for situationNumber = 0:size(x,1)-1
                     disp("状況"+situationNumber+"のプレイヤー"+playerIndex+"の期待効用: ");
@@ -41,6 +45,9 @@ classdef ExpectedUtilityHelper
                             playerMatching = playerMatchings(j);
                             totalExpectedUtilities(j) = playerMatching.calculateTotalExpectedUtility(x);
                         end
+
+                        allPlayerMatchings{playerIndex, situationNumber+1, i} = playerMatchings;
+                        allSocialExpectedUtilities{playerIndex, situationNumber+1, i} = totalExpectedUtilities;
             
                         totalExpectedUtilities_onlyMax = UtilsHelper.getMaxCandidates(totalExpectedUtilities); % 最大となる候補のみに絞り、最大とならない候補については0*0 doubleでmasking
             
@@ -87,27 +94,31 @@ classdef ExpectedUtilityHelper
                     end
             
                     allConditions
-                    save("data/right_vec/rightVec_"+string(playerIndex)+"_"+string(situationNumber)+".mat", "rightVec");
-                    save("data/conditions_vec/conditionsVec_"+string(playerIndex)+"_"+string(situationNumber)+".mat", "conditionsVec");
+
+                    rightVecs{playerIndex, situationNumber+1} = rightVec;
+                    conditionsVecs{playerIndex, situationNumber+1} = conditionsVec;
                 end
             end
-            save('data/allConditions.mat', 'allConditions');
+            save('data/materials.mat', 'rightVecs', 'conditionsVecs', 'allConditions');
+            save('data/playerMatchings.mat', 'allPlayerMatchings', 'allSocialExpectedUtilities');
         end
     end
 
     methods (Static)
-        % 各期待効用の右辺ベクトルを/data/right_vec/rightVec_*.matから読み込み、その全部のデータをテキストファイルに出力する
+        % % 各期待効用の右辺ベクトルを/data/right_vec/rightVec_*.matから読み込み、その全部のデータをテキストファイルに出力する
         function writeRightVecs(outputPath)
             % 出力ファイルを開く（書き込みモード）
             fileID = fopen(outputPath, 'w');
 
+            data = load("data/materials.mat", "rightVecs");
+            rightVecs = data.rightVecs;
+
             for playerIndex = 1:6
                 for s = 0:63
-                    data = load("data/right_vec/rightVec_" + string(playerIndex) + "_" + string(s) + ".mat", "rightVec");
+                    rightVec = rightVecs{playerIndex, s+1};
                     fprintf(fileID, '------\n');
                     fprintf(fileID, "rightVec_%s_%d\n", string(playerIndex), s); % ファイル名をファイルに書き込む
                     disp("rightVec_" + string(playerIndex) + "_" + string(s)+"を書き込み中");
-                    rightVec = data.rightVec;
                     formattedElements = strings(1, length(rightVec)); % 結果格納用
 
                     for i = 1:length(rightVec)
@@ -140,19 +151,22 @@ classdef ExpectedUtilityHelper
 
             % 出力ファイルを開く（書き込みモード）
             fileID = fopen(outputPath, 'w');
-    
+
+            data = load("data/materials.mat", "conditionsVecs");
+            conditionsVecs = data.conditionsVecs;
+
             for playerIndex = 1:6
                 for s = 0:63
-                    data = load("data/conditions_vec/conditionsVec_" + string(playerIndex) + "_" + string(s) + ".mat", "conditionsVec");
                     fprintf(fileID, '------\n');
                     fprintf(fileID, "conditionsVec_%s_%d\n", string(playerIndex), s); % ファイル名をファイルに書き込む
                     disp("conditionsVec_" + string(playerIndex) + "_" + string(s)+"を書き込み中");
+                    conditionsVec = conditionsVecs{playerIndex, s+1};
     
-                    if iscell(data.conditionsVec) % セル配列か確認
-                        formattedElements = strings(1, length(data.conditionsVec)); % 結果格納用
+                    if iscell(conditionsVec) % セル配列か確認
+                        formattedElements = strings(1, length(conditionsVec)); % 結果格納用
                         
-                        for i = 1:length(data.conditionsVec)
-                            elem = data.conditionsVec{i};
+                        for i = 1:length(conditionsVec)
+                            elem = conditionsVec{i};
                             
                             if isempty(elem{1})
                                 fprintf(fileID, '%s\n', '[]');
@@ -180,7 +194,7 @@ classdef ExpectedUtilityHelper
                         end
                     else
                         % 'cell'型ではない場合、そのまま文字列として書き込む
-                        fprintf(fileID, '%s\n', string(data.conditionsVec)); % セルでない場合そのままファイルに書き込む
+                        fprintf(fileID, '%s\n', string(conditionsVec)); % セルでない場合そのままファイルに書き込む
                     end
                 end
             end
@@ -192,7 +206,7 @@ classdef ExpectedUtilityHelper
         end
 
         function writeAllConditions(outputPath)
-            data = load("data/allConditions.mat", "allConditions");
+            data = load("data/materials.mat", "allConditions");
             allConditions = data.allConditions;
       
             % 出力ファイルを開く（書き込みモード）

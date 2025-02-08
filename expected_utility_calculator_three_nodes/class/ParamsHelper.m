@@ -8,16 +8,19 @@ classdef ParamsHelper
       % syms m [3 1] positive
       % syms p [3 1] positive
       % syms p_ [3 3] positive
+      % ノード1: 主要都市
+      % ノード2: 副中心都市
+      % ノード3: 田舎
       w = 500;
       c = 100;
-      r_0 = [1000; 4000; 2000];
-      a = [10; 50; 20];
-      m = [3; 1; 4];
-      p = [0.8; 0.6; 0.1];
+      r_0 = [3000; 2500; 1000];
+      a = [150; 50; 10];
+      m = [1; 2; 5];
+      p = [0.9; 0.7; 0.2];
       p_ = [
-        0, 0.2, 0.8;
-        0.4, 0, 0.6;
-        0.7, 0.3, 0;
+        0, 1, 0; % 主要中心都市 -> 副中心都市: 1
+        1, 0, 0; % 副中心都市 -> 主要中心都市: 1
+        0.7, 0.3, 0; % 田舎 -> 主要中心都市: 0.7, 田舎 -> 副中心都市: 0.3
       ];
       u = ParamsHelper.calculateTaxiUtilities(c, w);
       r = ParamsHelper.calculatePassengerUtilities(r_0, a);
