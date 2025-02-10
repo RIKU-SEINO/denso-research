@@ -106,4 +106,21 @@ classdef PlayerMatching
       end
     end
   end
+
+  methods
+    % playerMatchingにおいて、異ノードマッチが存在するかどうかを返す
+    function isExist = isExistDifferentNodeMatching(obj)
+      isExist = false;
+      for i = 1:length(obj.playerPairArray)
+        playerPair = obj.playerPairArray(i);
+        taxi = playerPair.taxi;
+        passenger = playerPair.passenger;
+
+        if ~isempty(taxi) && ~isempty(passenger) && taxi.getNodeNum() ~= passenger.getNodeNum()
+          isExist = true;
+          break;
+        end
+      end
+    end
+  end
 end

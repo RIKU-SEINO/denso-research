@@ -80,6 +80,8 @@ classdef Player
       else
         result = 'unknown';
       end
+
+      result = strcat(result, '(', num2str(obj.appearanceStepCount), ')');
     end
   end
 end

@@ -390,6 +390,9 @@ for playerIndex = 1:6
         idx = find(strcmp(alreadySolvedVarNames, x_ps_char));
         value = alreadySolvedVarValues{idx};
         vars(x_ps_char) = value;
+
+        eval([x_ps_char ' = ' num2str(value) ';']);
+        x(situationNumber + 1, playerIndex) = value;
     end
 end
 save('data/solution.mat', 'vars')
@@ -443,34 +446,74 @@ for situationNumber = 0:63
     ylim([min(cell2mat(alreadySolvedVarValues)) 1000+max(cell2mat(alreadySolvedVarValues))]);
 end
 
-%% 7. 決定された最適マッチングを表示
+%% 7. 決定された最適マッチングを保存
+optimalPlayerMatchingsSummaryFile = fopen("data/optimal_player_matchings_summary.txt", "w");
+optimalPlayerMatchings = cell(6, 64, 27);
+optimalSocialExpectedUtilities = cell(6, 64, 27);
 for playerIndex = 1:6
+    disp("playerIndex: " + playerIndex);
+    localMatchings = cell(64, 27);       % 各プレイヤーごとにローカルなcell配列を作成
+    localUtilities = cell(64, 27);
+    
     for situationNumber = 0:63
+        disp("situationNumber: " + situationNumber);
         situation = Situation(situationNumber);
 
         if ~situation.isPlayerPresent(playerIndex)
             continue;
         end
+
         nextSituations = situation.createNextSituationsByOneStep();
+
         for i = 1:length(nextSituations)
             nextSituation = nextSituations(i);
+
             socialUtilities = allSocialExpectedUtilities{playerIndex, situationNumber+1, i};
             playerMatchings = allPlayerMatchings{playerIndex, situationNumber+1, i};
 
-            [maxValue, maxIndex] = max(subs(socialUtilities, alreadySolvedVarNames, alreadySolvedVarValues));
+            % シンボリックな結果を得てから、数値に変換
+            numericValues = eval(socialUtilities);
+            [maxValue, maxIndex] = max(numericValues);
 
             optimalPlayerMatching = playerMatchings(maxIndex);
 
-            disp('-------------------');
-            disp("playerIndex: " + playerIndex + ", situationNumber: " + situationNumber + ", nextSituationNumber: " + nextSituation.situationNumber);
-            disp("Optimal Player Matching: ");
-            disp(optimalPlayerMatching.toString());
-            disp("Social Expected Utility: ");
-            disp(maxValue);
-        end
-    end
-end
+            fprintf(optimalPlayerMatchingsSummaryFile,  '-------------------\n');
+            fprintf(optimalPlayerMatchingsSummaryFile,  'playerIndex: %d, situationNumber: %d, nextSituationNumber: %d\n', playerIndex, situationNumber, nextSituation.situationNumber);
 
+            for k = 1:length(playerMatchings)
+                playerMatching = playerMatchings(k);
+                symbolicUtility = socialUtilities(k);
+                numericUtility = numericValues(k);
+                if k == maxIndex
+                    if playerMatching.isExistDifferentNodeMatching()
+                        fprintf(optimalPlayerMatchingsSummaryFile,  '異');
+                    else
+                        fprintf(optimalPlayerMatchingsSummaryFile,  '同');
+                    end
+                    if isequal(num2str(numericUtility), char(symbolicUtility))
+                        fprintf(optimalPlayerMatchingsSummaryFile,  strcat("* ", playerMatching.toString(), " -> ", char(symbolicUtility), "\n"));
+                    else
+                        fprintf(optimalPlayerMatchingsSummaryFile,  strcat("* ", playerMatching.toString(), " -> ", char(symbolicUtility), " (", num2str(numericUtility), ")\n"));
+                    end
+                else
+                    if isequal(num2str(numericUtility), char(symbolicUtility))
+                        fprintf(optimalPlayerMatchingsSummaryFile,  strcat("  　", playerMatching.toString(), " -> ", char(symbolicUtility), "\n"));
+                    else
+                        fprintf(optimalPlayerMatchingsSummaryFile,  strcat("  　", playerMatching.toString(), " -> ", char(symbolicUtility), " (", num2str(numericUtility), ")\n"));
+                    end
+                end
+            end
+
+            localMatchings{situationNumber+1, i} = optimalPlayerMatching;
+            localUtilities{situationNumber+1, i} = maxValue;
+        end
+
+        fprintf(optimalPlayerMatchingsSummaryFile,  '\n');
+    end
+    
+    optimalPlayerMatchings(playerIndex, :, :) = localMatchings;
+    optimalSocialExpectedUtilities(playerIndex, :, :) = localUtilities;
+end
 
 
 % Lambda_p = zeros(length(x_vec));
