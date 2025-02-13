@@ -63,7 +63,7 @@ classdef ParamsHelper
       for i = 1:nodeNum
         for j = 1:nodeNum
           for k = 1:nodeNum
-            u(i, j, k) = -c * abs(i - j) + w * abs(j - k);
+            u(i, j, k) = -c * (abs(i - j) + abs(j - k)) + w * abs(j - k);
           end
         end
       end
