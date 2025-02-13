@@ -81,7 +81,9 @@ classdef Player
         result = 'unknown';
       end
 
-      result = strcat(result, '(', num2str(obj.appearanceStepCount), ')');
+      if obj.playerIndex == 1 || obj.playerIndex == 3 || obj.playerIndex == 5
+        result = strcat(result, '(', num2str(obj.appearanceStepCount), ')');
+      end
     end
   end
 end
