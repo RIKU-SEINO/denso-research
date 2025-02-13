@@ -392,7 +392,6 @@ for playerIndex = 1:6
         vars(x_ps_char) = value;
 
         eval([x_ps_char ' = ' num2str(value) ';']);
-        x(situationNumber + 1, playerIndex) = value;
     end
 end
 save('data/solution.mat', 'vars')
@@ -440,7 +439,7 @@ for situationNumber = 0:63
     if isempty(presentPlayerNames)
         presentPlayerNames = "None";
     end
-    title(situationNumber + ": " + presentPlayerNames);
+    title(situationNumber + ": " + presentPlayerNames(1:end-1));
     xticklabels(playerNames);
     xtickangle(0);
     ylim([min(cell2mat(alreadySolvedVarValues)) 1000+max(cell2mat(alreadySolvedVarValues))]);
