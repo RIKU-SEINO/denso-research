@@ -28,6 +28,112 @@ classdef PlayerPair
         id = char(strjoin(string(ids), '-'));
         id = strcat('{', id, '}');
     end
+
+    function result = is_included_taxi(obj)
+      result = false;
+      for i = 1:length(obj.players)
+        if obj.players{i}.is_taxi()
+          result = true;
+          break
+        end
+      end
+    end
+
+    function player = get_taxi(obj)
+      player = [];
+      for i = 1:length(obj.players)
+        if obj.players{i}.is_taxi()
+          player = obj.players{i};
+          break
+        end
+      end
+    end
+
+    function result = is_included_passenger(obj)
+      result = false;
+      for i = 1:length(obj.players)
+        if obj.players{i}.is_passenger()
+          result = true;
+          break
+        end
+      end
+    end
+
+    function player = get_passenger(obj)
+      player = [];
+      for i = 1:length(obj.players)
+        if obj.players{i}.is_passenger()
+          player = obj.players{i};
+          break
+        end
+      end
+    end
+
+    function result = is_matched(obj)
+      result = obj.is_included_taxi() && obj.is_included_passenger();
+    end
+
+    % return player after executing matching of obj (PlayerPair)
+    % remained player is just one player
+    function player = get_remained_player_after_matching_of_pair(obj)
+      if obj.is_matched() % taxi and passenger are matched
+        taxi = obj.get_taxi();
+        passenger = obj.get_passenger();
+        
+        i = taxi.node;
+        j = passenger.node;
+        k = passenger.destination_node;
+
+        if taxi.appearance_step ~= 0
+          disp('warning: appearance_step is not 0, which contradicts the assumption');
+        end
+        taxi.node = k; % taxi moves to the destination node of passenger
+        taxi.appearance_step = taxi.appearance_step + abs(i - j) + abs(j - k); % taxi moves to the destination node of passenger through the node of passenger
+        taxi.validate();
+
+        player = taxi;
+      elseif obj.is_included_taxi() % taxi are remained
+        player = obj.get_taxi();
+      elseif obj.is_included_passenger() % passenger are remained
+        player = obj.get_passenger();
+      end
+    end
+
+    function utilities = get_utilities(obj)
+      [~, ~, ~, ~, ~, ~, ~, u, r, ~, ~] = ParamsHelper.getSymbolicParams();
+
+      all_players = Player.get_all_players();
+      utilities = sym(zeros(length(all_players), 1));
+
+      if ~obj.is_matched()
+        return
+      end
+
+      taxi = obj.get_taxi();
+      passenger = obj.get_passenger();
+
+      i = taxi.node;
+      j = passenger.node;
+      k = passenger.destination_node;
+
+      utilities(taxi.index()) = u(i, j, k);
+      utilities(passenger.index()) = r(i, j);
+    end
+  end
+
+  methods (Static)
+    function ids = ids(player_pairs)
+      ids = cell(length(player_pairs), 1);
+      for i = 1:length(player_pairs)
+        ids{i} = player_pairs{i}.id();
+      end
+    end
+
+    function player_pairs = sort_player_pairs(player_pairs)
+      ids = PlayerPair.ids(player_pairs);
+      [~, idx] = sort(ids);
+      player_pairs = player_pairs(idx);
+    end
   end
 
   % validation

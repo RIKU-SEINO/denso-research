@@ -3,18 +3,27 @@ classdef Player
 
   properties
     type % "taxi" or "passenger"
-    node_number % 1, 2 or 3
+    node % 1, 2 or 3
+    destination_node % 1, 2 or 3 if passenger, which is different from node. 0 if taxi
     appearance_step % 0 or more (max 0 or 3 or 4)
   end
 
   % constructor
   methods
-    function obj = Player(type, node_number, appearance_step)
+    function obj = Player(type, node, destination_node, appearance_step)
         obj.type = type;
-        obj.node_number = node_number;
+        obj.node = node;
+        obj.destination_node = destination_node;
         obj.appearance_step = appearance_step;
 
         obj.validate();
+    end
+  end
+
+  % override
+  methods
+    function result = eq(obj, other)
+      result = strcmp(obj.type, other.type) && obj.node == other.node && obj.destination_node == other.destination_node && obj.appearance_step == other.appearance_step;
     end
   end
 
@@ -27,16 +36,79 @@ classdef Player
           type_alias = 'ps';
       end
 
-      id = strcat(type_alias, num2str(obj.node_number));
+      id = strcat(type_alias, num2str(obj.node));
 
       if obj.type == "taxi"
         id = strcat(id, '(', num2str(obj.appearance_step), ')');
+      else
+        id = strcat(id, '[', num2str(obj.destination_node), ']');
       end
+    end
+
+    function index = index(obj)
+      % all_playersの中でのindexを返す
+      all_players = Player.get_all_players();
+      index = -1;
+      for i = 1:length(all_players)
+        if eq(obj, all_players{i})
+          index = i;
+          break
+        end
+      end
+
+      if index == -1
+        error("Player not found in all_players");
+      end
+    end
+
+    function result = is_taxi(obj)
+      result = obj.type == "taxi";
+    end
+
+    function result = is_empty_taxi(obj)
+      result = obj.type == "taxi" && obj.appearance_step == 0;
+    end
+
+    function result = is_passenger(obj)
+      result = obj.type == "passenger";
     end
   end
 
   % Static methods
   methods (Static)
+    function all_taxis = get_all_taxis()
+      all_taxis = {};
+      for node = 1:3
+        for appearance_step = 0:3
+          all_taxis{end+1, 1} = Player('taxi', node, 0, appearance_step);
+        end
+
+        if node ~= 2
+          all_taxis{end+1, 1} = Player('taxi', node, 0, 4);
+        end
+      end
+    end
+
+    function all_passengers = get_all_passengers()
+      all_passengers = {};
+      for i = 1:3
+        for j = 1:3
+          if i == j
+            continue
+          end
+
+          all_passengers{end+1, 1} = Player('passenger', i, j, 0);
+        end
+      end
+    end
+
+    function all_players = get_all_players()
+      taxis = Player.get_all_taxis();
+      passengers = Player.get_all_passengers();
+
+      all_players = [taxis; passengers];
+    end
+
     function ids = ids(players)
       ids = cell(length(players), 1);
       for i = 1:length(players)
@@ -82,8 +154,8 @@ classdef Player
             error("type must be taxi or passenger");
         end
 
-        if obj.node_number ~= 1 && obj.node_number ~= 2 && obj.node_number ~= 3
-            error("node_number must be 1, 2 or 3");
+        if obj.node ~= 1 && obj.node ~= 2 && obj.node ~= 3
+            error("node must be 1, 2 or 3");
         end
 
         if obj.appearance_step < 0
@@ -98,12 +170,20 @@ classdef Player
             error("appearance_step must be 0 when type is passenger");
         end
 
-        if obj.type == "taxi" && obj.node_number ~= 2 && obj.appearance_step > 4
-            error("appearance_step must be 0, 1, 2, 3 or 4 when type is taxi and node_number is 1 or 3");
+        if obj.type == "taxi" && obj.node ~= 2 && obj.appearance_step > 4
+            error("appearance_step must be 0, 1, 2, 3 or 4 when type is taxi and node is 1 or 3");
         end
 
-        if obj.type == "taxi" && obj.node_number == 2 && obj.appearance_step > 3
-            error("appearance_step must be 0, 1, 2 or 3 when type is taxi and node_number is 2");
+        if obj.type == "taxi" && obj.node == 2 && obj.appearance_step > 3
+            error("appearance_step must be 0, 1, 2 or 3 when type is taxi and node is 2");
+        end
+
+        if obj.node == obj.destination_node
+            error("node and destination_node must be different");
+        end
+
+        if obj.type == "taxi" && obj.destination_node ~= 0
+            error("destination_node must be 0 when type is taxi");
         end
     end
   end
