@@ -68,8 +68,30 @@ classdef PlayerSet
       end
     end
 
+    function result = is_node_occupied_by_taxi(obj, node)
+      result = false;
+      for i = 1:length(obj.players)
+        player = obj.players{i};
+        if player.is_taxi() && player.node == node
+          result = true;
+          break
+        end
+      end
+    end
+
+    function result = is_node_occupied_by_passenger(obj, node)
+      result = false;
+      for i = 1:length(obj.players)
+        player = obj.players{i};
+        if player.is_passenger() && player.node == node
+          result = true;
+          break
+        end
+      end
+    end
+
     function obj = add_player(obj, player)
-      if obj.is_present(player)
+      if obj.is_node_occupied_by_taxi(player.node) && player.is_taxi() || obj.is_node_occupied_by_passenger(player.node) && player.is_passenger()
         return;
       end
 
@@ -90,7 +112,6 @@ classdef PlayerSet
         player = obj.players{i};
         if player.is_taxi()
           player.appearance_step = max([player.appearance_step - 1, 0]);
-          player.validate();
         end
 
         obj.players{i} = player;
@@ -140,26 +161,25 @@ classdef PlayerSet
     function all_player_matchings = get_all_player_matchings(obj)
       all_player_matchings = {};
 
-      taxis_matching_candidates = obj.get_empty_taxis(); % Only empty taxis can be matched
-      passengers_matching_candidates = obj.get_passengers();
-      matching_candidates = [taxis_matching_candidates; passengers_matching_candidates];
+      taxi_candidates = obj.get_empty_taxis();
+      passenger_candidates = obj.get_passengers();
 
       player_pairs = {};
-      for i = 1:length(matching_candidates)
-        player_pairs{end+1} = PlayerPair({matching_candidates{i}});
+      for i = 1:length(obj.players)
+        player_pairs{end+1} = PlayerPair({obj.players{i}});
       end
       all_player_matchings{end+1, 1} = PlayerMatching(player_pairs);
 
-      if isempty(taxis_matching_candidates) || isempty(passengers_matching_candidates)
+      if isempty(taxi_candidates) || isempty(passenger_candidates)
         return
       end
 
-      taxi = taxis_matching_candidates{1}; % Operated taxi is only one based on the assumption
-      for i = 1:length(passengers_matching_candidates)
-        passenger = passengers_matching_candidates{i};
+      taxi = taxi_candidates{1}; % Operated taxi is only one based on the assumption
+      for i = 1:length(passenger_candidates)
+        passenger = passenger_candidates{i};
         player_pairs = {PlayerPair({taxi; passenger})};
 
-        remained_passengers = Utils.obj_setdiff(passengers_matching_candidates, {passenger});
+        remained_passengers = Utils.obj_setdiff(passenger_candidates, {passenger});
         for j = 1:length(remained_passengers)
           player_pairs{end+1, 1} = PlayerPair({remained_passengers{j}});
         end
@@ -178,6 +198,15 @@ classdef PlayerSet
       for i = 1:length(obj.players)
         player = obj.players{i};
         expected_utilities(player.index()) = ExpectedUtilityHelper.get_expected_utility(player, obj, x);
+      end
+    end
+
+    % プレイヤ集合から考えられるマッチングの候補と期待効用和の候補
+    function [player_matching_candidates, expected_utility_sum_candidates] = get_player_matching_candidates(obj)
+      player_matching_candidates = obj.get_all_player_matchings();
+      expected_utility_sum_candidates = sym(zeros(length(player_matching_candidates), 1));
+      for i = 1:length(player_matching_candidates)
+        expected_utility_sum_candidates(i) = player_matching_candidates{i}.calculate_expected_utility_sum();
       end
     end
   end
@@ -226,20 +255,26 @@ classdef PlayerSet
     end
 
     function all_player_sets = get_all_player_sets()
-      % passenger variation
-      passenger_player_sets = PlayerSet.get_all_passenger_sets();
+      persistent cached_player_sets; % 静的変数の宣言
 
-      % taxi variation
-      taxi_player_sets = PlayerSet.get_all_taxi_sets();
+      if isempty(cached_player_sets)
+        % passenger variation
+        passenger_player_sets = PlayerSet.get_all_passenger_sets();
 
-      % all player sets. passenger_player_setsとtaxi_player_setsの直積を取る
-      all_player_sets = {};
-      for i = 1:length(passenger_player_sets)
-        for j = 1:length(taxi_player_sets)
-          player_set = passenger_player_sets{i}.combine(taxi_player_sets{j});
-          all_player_sets{end+1, 1} = player_set;
+        % taxi variation
+        taxi_player_sets = PlayerSet.get_all_taxi_sets();
+
+        % all player sets. passenger_player_setsとtaxi_player_setsの直積を取る
+        cached_player_sets = {};
+        for i = 1:length(passenger_player_sets)
+          for j = 1:length(taxi_player_sets)
+            player_set = passenger_player_sets{i}.combine(taxi_player_sets{j});
+            cached_player_sets{end+1, 1} = player_set;
+          end
         end
       end
+
+      all_player_sets = cached_player_sets;
     end
   end  
 

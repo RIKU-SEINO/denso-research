@@ -100,24 +100,25 @@ classdef PlayerPair
     end
 
     function utilities = get_utilities(obj)
-      [~, ~, ~, ~, ~, ~, ~, u, r, ~, ~] = ParamsHelper.getSymbolicParams();
+      [~, ~, ~, a, ~, ~, ~, u, r, ~] = ParamsHelper.getSymbolicParams();
 
       all_players = Player.get_all_players();
       utilities = sym(zeros(length(all_players), 1));
 
-      if ~obj.is_matched()
-        return
-      end
-
       taxi = obj.get_taxi();
       passenger = obj.get_passenger();
 
-      i = taxi.node;
-      j = passenger.node;
-      k = passenger.destination_node;
+      if obj.is_matched()
+        i = taxi.node;
+        j = passenger.node;
+        k = passenger.destination_node;
 
-      utilities(taxi.index()) = u(i, j, k);
-      utilities(passenger.index()) = r(i, j);
+        utilities(taxi.index()) = u(i, j, k);
+        utilities(passenger.index()) = r(i, j);
+      elseif obj.is_included_passenger()
+        j = passenger.node;
+        utilities(passenger.index()) = -a(j);
+      end
     end
   end
 
