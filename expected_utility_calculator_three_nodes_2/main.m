@@ -9,20 +9,25 @@ if generate_x
   save('data/data.mat', 'x');
 end
 
+% 考えられる全てのプレイヤ集合を取得
 all_player_sets = PlayerSet.get_all_player_sets();
 for i = 1:length(all_player_sets)
   player_set = all_player_sets{i};
-  
-  player_sets_after_one_step = player_set.get_all_player_sets_after_one_step();
-  for j = 1:length(player_sets_after_one_step)
-    player_set_after_one_step = player_sets_after_one_step{j};
+
+  if isempty(player_set.get_empty_taxis())
+    continue;
+  end
+  disp("--------------------");
+  disp(string(i) + "/" + string(length(all_player_sets)));
+
     
-    player_matchings = player_set_after_one_step.get_all_player_matchings();
-    for k = 1:length(player_matchings)
-      player_matching = player_matchings{k};
-      
-      expected_utilities = player_matching.calculate_expected_utilities();
-      disp(expected_utilities);
-    end
+  [player_matching_candidates, expected_utility_sum_candidates] = player_set.get_player_matching_candidates();
+  for k = 1:length(player_matching_candidates)
+    player_matching = player_matching_candidates{k};
+    expected_utility_sum = expected_utility_sum_candidates(k);
+    % player_matching.idはchar
+    % expected_utility_sumはsymであることに注意。doubleには変換できない。
+    % disp(player_matching.id + ": " + expected_utility_sum);だとエラーになる
+    disp(player_matching.id + ": " + char(expected_utility_sum));
   end
 end
