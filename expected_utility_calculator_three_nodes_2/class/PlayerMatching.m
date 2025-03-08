@@ -54,5 +54,15 @@ classdef PlayerMatching
       end
       % 補足: 1.と2.の両方に該当するプレイヤもいる。例えば、タクシーは乗客と組まれた2.に該当するが、その後目的地までの移動後を考えて、1.にも該当する。
     end
+
+    function expected_utility_sum = calculate_expected_utility_sum(obj)
+      expected_utilities = obj.calculate_expected_utilities();
+      expected_utility_sum = sum(expected_utilities);
+    end
+
+    function expected_utility = calculate_expected_utility_by_player(obj, player)
+      expected_utilities = obj.calculate_expected_utilities();
+      expected_utility = expected_utilities(player.index());
+    end
   end
 end
