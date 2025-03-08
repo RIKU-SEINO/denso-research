@@ -1,6 +1,6 @@
 classdef ParamsHelper
   methods (Static)
-    function [w, c, r_0, a, m, p, p_, u, r, q, d] = getSymbolicParams()
+    function [w, c, r_0, a, m, p, p_, u, r, q] = getSymbolicParams()
       % シンボリック変数の定義
       % syms w c positive
       % syms r_0 [3 1] positive
@@ -11,55 +11,30 @@ classdef ParamsHelper
       % ノード1: 主要都市
       % ノード2: 副中心都市
       % ノード3: 田舎
-      w = 500;
-      c = 100;
-      r_0 = [3000; 2500; 1000];
-      a = [150; 50; 10];
-      m = [1; 2; 5];
-      p = [0.9; 0.7; 0.2];
-      p_ = [
-        0, 1, 0; % 主要中心都市 -> 副中心都市: 1
-        1, 0, 0; % 副中心都市 -> 主要中心都市: 1
-        0.7, 0.3, 0; % 田舎 -> 主要中心都市: 0.7, 田舎 -> 副中心都市: 0.3
-      ];
+      w = sym('w', 'positive');
+      c = sym('c', 'positive');
+      r_0 = sym('r_', [3, 1], 'positive');
+      a = sym('a_', [3, 1], 'positive');
+      m = sym('m_', [3, 1], 'positive');
+      p = sym('p_', [3, 1], 'positive');
+      p_ = sym('p_', [3, 3], 'positive');
+      % r_0 = [3000; 2500; 1000];
+      % a = [150; 50; 10];
+      % m = [1; 2; 5];
+      % p = [0.9; 0.7; 0.2];
+      % p_ = [
+      %   0, 1, 0; % 主要中心都市 -> 副中心都市: 1
+      %   1, 0, 0; % 副中心都市 -> 主要中心都市: 1
+      %   0.7, 0.3, 0; % 田舎 -> 主要中心都市: 0.7, 田舎 -> 副中心都市: 0.3
+      % ];
       u = ParamsHelper.calculateTaxiUtilities(c, w);
       r = ParamsHelper.calculatePassengerUtilities(r_0, a);
       q = ParamsHelper.calculateTransitionProbabilityVector(p, p_);
-
-      d = [
-        0, 0, 0, 0, 0, 0; %何も出現しない
-        0, 2, 0, 0, 0, 0; %ps1のみ出現(ps1はノード2に移動したい)
-        0, 3, 0, 0, 0, 0; %ps1のみ出現(ps1はノード3に移動したい)
-        0, 0, 0, 1, 0, 0; %ps2のみ出現(ps2はノード1に移動したい)
-        0, 0, 0, 3, 0, 0; %ps2のみ出現(ps2はノード3に移動したい)
-        0, 2, 0, 1, 0, 0; %ps1とps2が出現(ps1はノード2に、ps2はノード1に移動したい)
-        0, 3, 0, 1, 0, 0; %ps1とps2が出現(ps1はノード3に、ps2はノード1に移動したい)
-        0, 2, 0, 3, 0, 0; %ps1とps2が出現(ps1はノード2に、ps2はノード3に移動したい)
-        0, 3, 0, 3, 0, 0; %ps1とps2が出現(ps1はノード3に、ps2はノード3に移動したい)
-        0, 0, 0, 0, 0, 1; %ps3のみ出現(ps3はノード1に移動したい)
-        0, 0, 0, 0, 0, 2; %ps3のみ出現(ps3はノード2に移動したい)
-        0, 2, 0, 0, 0, 1; %ps1とps3が出現(ps1はノード2に、ps3はノード1に移動したい)
-        0, 3, 0, 0, 0, 1; %ps1とps3が出現(ps1はノード3に、ps3はノード1に移動したい)
-        0, 2, 0, 0, 0, 2; %ps1とps3が出現(ps1はノード2に、ps3はノード2に移動したい)
-        0, 3, 0, 0, 0, 2; %ps1とps3が出現(ps1はノード3に、ps3はノード2に移動したい)
-        0, 0, 0, 1, 0, 1; %ps2とps3が出現(ps2はノード1に、ps3はノード1に移動したい)
-        0, 0, 0, 3, 0, 1; %ps2とps3が出現(ps2はノード3に、ps3はノード1に移動したい)
-        0, 0, 0, 1, 0, 2; %ps2とps3が出現(ps2はノード1に、ps3はノード2に移動したい)
-        0, 0, 0, 3, 0, 2; %ps2とps3が出現(ps2はノード3に、ps3はノード2に移動したい)
-        0, 2, 0, 1, 0, 1; %ps1とps2とps3が出現(ps1はノード2に、ps2はノード1に、ps3はノード1に移動したい)
-        0, 3, 0, 1, 0, 1; %ps1とps2とps3が出現(ps1はノード3に、ps2はノード1に、ps3はノード1に移動したい)
-        0, 2, 0, 3, 0, 1; %ps1とps2とps3が出現(ps1はノード2に、ps2はノード3に、ps3はノード1に移動したい)
-        0, 3, 0, 3, 0, 1; %ps1とps2とps3が出現(ps1はノード3に、ps2はノード3に、ps3はノード1に移動したい)
-        0, 2, 0, 1, 0, 2; %ps1とps2とps3が出現(ps1はノード2に、ps2はノード1に、ps3はノード2に移動したい)
-        0, 3, 0, 1, 0, 2; %ps1とps2とps3が出現(ps1はノード3に、ps2はノード1に、ps3はノード2に移動したい)
-        0, 2, 0, 3, 0, 2; %ps1とps2とps3が出現(ps1はノード2に、ps2はノード3に、ps3はノード2に移動したい)
-        0, 3, 0, 3, 0, 2; %ps1とps2とps3が出現(ps1はノード3に、ps2はノード3に、ps3はノード2に移動したい)
-      ].';
     end
 
     function u = calculateTaxiUtilities(c,w)
       nodeNum = 3;
-      u = zeros(nodeNum, nodeNum, nodeNum);
+      u = sym(zeros(nodeNum, nodeNum, nodeNum));
       for i = 1:nodeNum
         for j = 1:nodeNum
           for k = 1:nodeNum
@@ -71,7 +46,7 @@ classdef ParamsHelper
 
     function r = calculatePassengerUtilities(r_0, a) 
       nodeNum = 3;
-      r = zeros(nodeNum, nodeNum);
+      r = sym(zeros(nodeNum, nodeNum));
       for i = 1:nodeNum
         for j = 1:nodeNum
           r(i, j) = r_0(j) - abs(i - j) * a(j);
@@ -80,7 +55,7 @@ classdef ParamsHelper
     end
 
     function transitionProbabilityVector = calculateTransitionProbabilityVector(p, p_)
-      transitionProbabilityVector = zeros(27, 1);
+      transitionProbabilityVector = sym(zeros(27, 1));
 
       transitionProbabilityVector(1) = (1 - p(1)) * (1 - p(2)) * (1 - p(3));
 
