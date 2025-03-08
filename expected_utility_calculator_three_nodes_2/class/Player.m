@@ -103,10 +103,15 @@ classdef Player
     end
 
     function all_players = get_all_players()
-      taxis = Player.get_all_taxis();
-      passengers = Player.get_all_passengers();
+      persistent cached_players;
 
-      all_players = [taxis; passengers];
+      if isempty(cached_players)
+        taxis = Player.get_all_taxis();
+        passengers = Player.get_all_passengers();
+        cached_players = [taxis; passengers];
+      end
+
+      all_players = cached_players;
     end
 
     function ids = ids(players)
