@@ -28,13 +28,25 @@ classdef Utils
       for i = 1:length(allowed_skip_validation_methods)
         allowed_skip_method = allowed_skip_validation_methods{i}{1};
         allowed_skip_method_depth = allowed_skip_validation_methods{i}{2};
-        if strcmp(stack(allowed_skip_method_depth).name, allowed_skip_method)
-          result = true;
-          return
+        try
+          if strcmp(stack(allowed_skip_method_depth).name, allowed_skip_method)
+            result = true;
+            return
+          end
+        catch
+          % pass
         end
       end
 
       result = false;
+    end
+
+    function clear_cache()
+      persistent cache;
+      if ~isempty(cache)
+          cache = containers.Map('KeyType', 'char', 'ValueType', 'any'); % キャッシュを空のマップにリセット
+          fprintf('Cache cleared.\n');
+      end
     end
   end
 end
