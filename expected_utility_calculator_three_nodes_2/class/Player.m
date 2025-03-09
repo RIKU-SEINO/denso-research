@@ -72,6 +72,12 @@ classdef Player
     function result = is_passenger(obj)
       result = obj.type == "passenger";
     end
+
+    function obj = one_step_elapsed(obj)
+      if obj.is_taxi()
+        obj.appearance_step = max([obj.appearance_step - 1, 0]);
+      end
+    end
   end
 
   % Static methods

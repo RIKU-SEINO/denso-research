@@ -90,6 +90,16 @@ classdef PlayerSet
       end
     end
 
+    function result = is_all_node_occupied_by_passenger(obj)
+      result = true;
+      for node = 1:3
+        if ~obj.is_node_occupied_by_passenger(node)
+          result = false;
+          break
+        end
+      end
+    end
+
     function obj = add_player(obj, player)
       if obj.is_node_occupied_by_taxi(player.node) && player.is_taxi() || obj.is_node_occupied_by_passenger(player.node) && player.is_passenger()
         return;
@@ -110,11 +120,9 @@ classdef PlayerSet
     function obj = one_step_elapsed(obj)
       for i = 1:length(obj.players)
         player = obj.players{i};
-        if player.is_taxi()
-          player.appearance_step = max([player.appearance_step - 1, 0]);
-        end
+        player_one_step_elapsed = player.one_step_elapsed();
 
-        obj.players{i} = player;
+        obj.players{i} = player_one_step_elapsed;
       end
 
       obj = obj.sort();
@@ -149,6 +157,27 @@ classdef PlayerSet
       end
     end
 
+    function result = is_all_taxis_empty(obj)
+      result = true;
+      for i = 1:length(obj.players)
+        if ~obj.players{i}.is_empty_taxi() && obj.players{i}.is_taxi()
+          result = false;
+          break
+        end
+      end
+    end
+
+    function result = is_all_taxis_empty_after_just_m_steps(obj, m)
+      result = true;
+      for i = 1:length(obj.players)
+        player = obj.players{i};
+        if player.appearance_step ~= m && player.is_taxi()
+          result = false;
+          break;
+        end
+      end
+    end
+
     function passengers = get_passengers(obj)
       passengers = {};
       for i = 1:length(obj.players)
@@ -158,23 +187,27 @@ classdef PlayerSet
       end
     end
 
+    % マッチングアルゴリズム。計算量的に色々仮定をつけている
     function all_player_matchings = get_all_player_matchings(obj)
       all_player_matchings = {};
+      player_pairs = {};
 
       taxi_candidates = obj.get_empty_taxis();
       passenger_candidates = obj.get_passengers();
 
-      player_pairs = {};
-      for i = 1:length(obj.players)
-        player_pairs{end+1} = PlayerPair({obj.players{i}});
+      % 乗客が出現していないノードが存在する、もしくは、全てのノードに乗客が出現していても、タクシーが満車の状態では、誰もマッチングしないというマッチングも考える
+      if ~obj.is_all_node_occupied_by_passenger() || isempty(taxi_candidates)
+        for i = 1:length(obj.players)
+          player_pairs{end+1, 1} = PlayerPair({obj.players{i}});
+        end
+        all_player_matchings{end+1, 1} = PlayerMatching(player_pairs);
       end
-      all_player_matchings{end+1, 1} = PlayerMatching(player_pairs);
 
       if isempty(taxi_candidates) || isempty(passenger_candidates)
         return
       end
 
-      taxi = taxi_candidates{1}; % Operated taxi is only one based on the assumption
+      taxi = taxi_candidates{1}; % タクシーの運用台数は1としている
       for i = 1:length(passenger_candidates)
         passenger = passenger_candidates{i};
         player_pairs = {PlayerPair({taxi; passenger})};
@@ -188,25 +221,22 @@ classdef PlayerSet
       end
     end
 
-    function expected_utilities = get_expected_utilities(obj)
-      data = load('data/data.mat', 'x');
-      x = data.x;
-
+    function expected_utilities = get_expected_utilities(obj, x)
       all_players = Player.get_all_players();
       expected_utilities = sym(zeros(length(all_players), 1));
-
+  
       for i = 1:length(obj.players)
-        player = obj.players{i};
-        expected_utilities(player.index()) = ExpectedUtilityHelper.get_expected_utility(player, obj, x);
+          player = obj.players{i};
+          expected_utilities(player.index()) = ExpectedUtilityHelper.get_expected_utility(player, obj, x);
       end
-    end
+  end
 
     % プレイヤ集合から考えられるマッチングの候補と期待効用和の候補
-    function [player_matching_candidates, expected_utility_sum_candidates] = get_player_matching_candidates(obj)
+    function [player_matching_candidates, expected_utilities_candidates] = get_player_matching_candidates_info(obj)
       player_matching_candidates = obj.get_all_player_matchings();
-      expected_utility_sum_candidates = sym(zeros(length(player_matching_candidates), 1));
+      expected_utilities_candidates = cell(length(player_matching_candidates), 1);
       for i = 1:length(player_matching_candidates)
-        expected_utility_sum_candidates(i) = player_matching_candidates{i}.calculate_expected_utility_sum();
+        expected_utilities_candidates(i) = player_matching_candidates{i}.calculate_expected_utilities();
       end
     end
   end

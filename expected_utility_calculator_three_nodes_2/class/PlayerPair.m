@@ -100,7 +100,7 @@ classdef PlayerPair
     end
 
     function utilities = get_utilities(obj)
-      [~, ~, ~, a, ~, ~, ~, u, r, ~] = ParamsHelper.getSymbolicParams();
+      [~, ~, ~, a, ~, ~, u, r, ~] = ParamsHelper.getSymbolicParams();
 
       all_players = Player.get_all_players();
       utilities = sym(zeros(length(all_players), 1));

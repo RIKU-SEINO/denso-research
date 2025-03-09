@@ -41,27 +41,39 @@ classdef PlayerMatching
     end
 
     % calculate expected utility for each player after matching
-    function expected_utilities = calculate_expected_utilities(obj)
+    function expected_utilities = calculate_expected_utilities(obj, x)
+      persistent cached_data; % キャッシュを保持する変数 (persistent)
+      if isempty(cached_data)
+        cached_data = containers.Map('KeyType', 'char', 'ValueType', 'any');
+      end
+
+      key = obj.id();
+      if isKey(cached_data, key)
+        expected_utilities = cached_data(key);
+        return
+      end
+
       player_set_after_matching = obj.get_player_set_after_matching();
       
       % 2つに分けて計算をする
       % 1. マッチング後残ったプレイヤの期待効用
-      expected_utilities = player_set_after_matching.get_expected_utilities();
+      expected_utilities = player_set_after_matching.get_expected_utilities(x);
       % 2. マッチングで組まれたプレイヤの効用
       for i = 1:length(obj.player_pairs)
         player_pair = obj.player_pairs{i};
         expected_utilities = expected_utilities + player_pair.get_utilities();
       end
       % 補足: 1.と2.の両方に該当するプレイヤもいる。例えば、タクシーは乗客と組まれた2.に該当するが、その後目的地までの移動後を考えて、1.にも該当する。
+      cached_data(key) = expected_utilities;
     end
 
-    function expected_utility_sum = calculate_expected_utility_sum(obj)
-      expected_utilities = obj.calculate_expected_utilities();
+    function expected_utility_sum = calculate_expected_utility_sum(obj, x)
+      expected_utilities = obj.calculate_expected_utilities(x);
       expected_utility_sum = sum(expected_utilities);
     end
 
-    function expected_utility = calculate_expected_utility_by_player(obj, player)
-      expected_utilities = obj.calculate_expected_utilities();
+    function expected_utility = calculate_expected_utility_of_player(obj, player, x)
+      expected_utilities = obj.calculate_expected_utilities(x);
       expected_utility = expected_utilities(player.index());
     end
   end
