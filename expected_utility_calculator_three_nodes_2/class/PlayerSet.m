@@ -68,6 +68,17 @@ classdef PlayerSet
       end
     end
 
+    function result = is_all_possible_passenger_present(obj)
+      result = true;
+      all_possible_passengers = Player.get_all_passengers();
+      for i = 1:length(all_possible_passengers)
+        if ~obj.is_present(all_possible_passengers{i})
+          result = false;
+          break;
+        end
+      end
+    end
+
     function result = is_node_occupied_by_taxi(obj, node)
       result = false;
       for i = 1:length(obj.players)
@@ -195,8 +206,8 @@ classdef PlayerSet
       taxi_candidates = obj.get_empty_taxis();
       passenger_candidates = obj.get_passengers();
 
-      % 乗客が出現していないノードが存在する、もしくは、全てのノードに乗客が出現していても、タクシーが満車の状態では、誰もマッチングしないというマッチングも考える
-      if ~obj.is_all_node_occupied_by_passenger() || isempty(taxi_candidates)
+      % 出現確率が0ではないが、乗客が出現していないノードが存在する、もしくは、出現確率が0でない全てのノードに乗客が出現していても、タクシーが満車の状態では、誰もマッチングしないというマッチングも考える
+      if ~obj.is_all_possible_passenger_present() || isempty(taxi_candidates)
         for i = 1:length(obj.players)
           player_pairs{end+1, 1} = PlayerPair({obj.players{i}});
         end
@@ -245,34 +256,43 @@ classdef PlayerSet
 
     function all_passenger_sets = get_all_passenger_sets()
       % passenger variation
+      % In general case, use this
+      % all_passenger_sets = {
+      %   PlayerSet({}); % 何も出現しない
+      %   PlayerSet({Player('passenger', 1, 2, 0)}); % ps1のみ出現(ps1: 1->2)
+      %   PlayerSet({Player('passenger', 1, 3, 0)}); % ps1のみ出現(ps1: 1->3)
+      %   PlayerSet({Player('passenger', 2, 1, 0)}); % ps2のみ出現(ps2: 2->1)
+      %   PlayerSet({Player('passenger', 2, 3, 0)}); % ps2のみ出現(ps2: 2->3)
+      %   PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 1, 0)}); % ps1とps2が出現(ps1: 1->2, ps2: 2->1)
+      %   PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 1, 0)}); % ps1とps2が出現(ps1: 1->3, ps2: 2->1)
+      %   PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 3, 0)}); % ps1とps2が出現(ps1: 1->2, ps2: 2->3)
+      %   PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 3, 0)}); % ps1とps2が出現(ps1: 1->3, ps2: 2->3)
+      %   PlayerSet({Player('passenger', 3, 1, 0)}); % ps3のみ出現(ps3: 3->1)
+      %   PlayerSet({Player('passenger', 3, 2, 0)}); % ps3のみ出現(ps3: 3->2)
+      %   PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 3, 1, 0)}); % ps1とps3が出現(ps1: 1->2, ps3: 3->1)
+      %   PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 3, 1, 0)}); % ps1とps3が出現(ps1: 1->3, ps3: 3->1)
+      %   PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 3, 2, 0)}); % ps1とps3が出現(ps1: 1->2, ps3: 3->2)
+      %   PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 3, 2, 0)}); % ps1とps3が出現(ps1: 1->3, ps3: 3->2)
+      %   PlayerSet({Player('passenger', 2, 1, 0); Player('passenger', 3, 1, 0)}); % ps2とps3が出現(ps2: 2->1, ps3: 3->1)
+      %   PlayerSet({Player('passenger', 2, 3, 0); Player('passenger', 3, 1, 0)}); % ps2とps3が出現(ps2: 2->3, ps3: 3->1)
+      %   PlayerSet({Player('passenger', 2, 1, 0); Player('passenger', 3, 2, 0)}); % ps2とps3が出現(ps2: 2->1, ps3: 3->2)
+      %   PlayerSet({Player('passenger', 2, 3, 0); Player('passenger', 3, 2, 0)}); % ps2とps3が出現(ps2: 2->3, ps3: 3->2)
+      %   PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 1, 0); Player('passenger', 3, 1, 0)}); % ps1, ps2, ps3が出現(ps1: 1->2, ps2: 2->1, ps3: 3->1)
+      %   PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 1, 0); Player('passenger', 3, 1, 0)}); % ps1, ps2, ps3が出現(ps1: 1->3, ps2: 2->1, ps3: 3->1)
+      %   PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 3, 0); Player('passenger', 3, 1, 0)}); % ps1, ps2, ps3が出現(ps1: 1->2, ps2: 2->3, ps3: 3->1)
+      %   PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 3, 0); Player('passenger', 3, 1, 0)}); % ps1, ps2, ps3が出現(ps1: 1->3, ps2: 2->3, ps3: 3->1)
+      %   PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 1, 0); Player('passenger', 3, 2, 0)}); % ps1, ps2, ps3が出現(ps1: 1->2, ps2: 2->1, ps3: 3->2)
+      %   PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 1, 0); Player('passenger', 3, 2, 0)}); % ps1, ps2, ps3が出現(ps1: 1->3, ps2: 2->1, ps3: 3->2)
+      %   PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 3, 0); Player('passenger', 3, 2, 0)}); % ps1, ps2, ps3が出現(ps1: 1->2, ps2: 2->3, ps3: 3->2)
+      %   PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 3, 0); Player('passenger', 3, 2, 0)}); % ps1, ps2, ps3が出現(ps1: 1->3, ps2: 2->3, ps3: 3->2)
+      % };
+
+      % If p and p_ are special matrices, hard code
       all_passenger_sets = {
         PlayerSet({}); % 何も出現しない
-        PlayerSet({Player('passenger', 1, 2, 0)}); % ps1のみ出現(ps1: 1->2)
-        PlayerSet({Player('passenger', 1, 3, 0)}); % ps1のみ出現(ps1: 1->3)
         PlayerSet({Player('passenger', 2, 1, 0)}); % ps2のみ出現(ps2: 2->1)
-        PlayerSet({Player('passenger', 2, 3, 0)}); % ps2のみ出現(ps2: 2->3)
-        PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 1, 0)}); % ps1とps2が出現(ps1: 1->2, ps2: 2->1)
-        PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 1, 0)}); % ps1とps2が出現(ps1: 1->3, ps2: 2->1)
-        PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 3, 0)}); % ps1とps2が出現(ps1: 1->2, ps2: 2->3)
-        PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 3, 0)}); % ps1とps2が出現(ps1: 1->3, ps2: 2->3)
         PlayerSet({Player('passenger', 3, 1, 0)}); % ps3のみ出現(ps3: 3->1)
-        PlayerSet({Player('passenger', 3, 2, 0)}); % ps3のみ出現(ps3: 3->2)
-        PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 3, 1, 0)}); % ps1とps3が出現(ps1: 1->2, ps3: 3->1)
-        PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 3, 1, 0)}); % ps1とps3が出現(ps1: 1->3, ps3: 3->1)
-        PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 3, 2, 0)}); % ps1とps3が出現(ps1: 1->2, ps3: 3->2)
-        PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 3, 2, 0)}); % ps1とps3が出現(ps1: 1->3, ps3: 3->2)
-        PlayerSet({Player('passenger', 2, 1, 0); Player('passenger', 3, 1, 0)}); % ps2とps3が出現(ps2: 2->1, ps3: 3->1)
-        PlayerSet({Player('passenger', 2, 3, 0); Player('passenger', 3, 1, 0)}); % ps2とps3が出現(ps2: 2->3, ps3: 3->1)
-        PlayerSet({Player('passenger', 2, 1, 0); Player('passenger', 3, 2, 0)}); % ps2とps3が出現(ps2: 2->1, ps3: 3->2)
-        PlayerSet({Player('passenger', 2, 3, 0); Player('passenger', 3, 2, 0)}); % ps2とps3が出現(ps2: 2->3, ps3: 3->2)
-        PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 1, 0); Player('passenger', 3, 1, 0)}); % ps1, ps2, ps3が出現(ps1: 1->2, ps2: 2->1, ps3: 3->1)
-        PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 1, 0); Player('passenger', 3, 1, 0)}); % ps1, ps2, ps3が出現(ps1: 1->3, ps2: 2->1, ps3: 3->1)
-        PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 3, 0); Player('passenger', 3, 1, 0)}); % ps1, ps2, ps3が出現(ps1: 1->2, ps2: 2->3, ps3: 3->1)
-        PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 3, 0); Player('passenger', 3, 1, 0)}); % ps1, ps2, ps3が出現(ps1: 1->3, ps2: 2->3, ps3: 3->1)
-        PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 1, 0); Player('passenger', 3, 2, 0)}); % ps1, ps2, ps3が出現(ps1: 1->2, ps2: 2->1, ps3: 3->2)
-        PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 1, 0); Player('passenger', 3, 2, 0)}); % ps1, ps2, ps3が出現(ps1: 1->3, ps2: 2->1, ps3: 3->2)
-        PlayerSet({Player('passenger', 1, 2, 0); Player('passenger', 2, 3, 0); Player('passenger', 3, 2, 0)}); % ps1, ps2, ps3が出現(ps1: 1->2, ps2: 2->3, ps3: 3->2)
-        PlayerSet({Player('passenger', 1, 3, 0); Player('passenger', 2, 3, 0); Player('passenger', 3, 2, 0)}); % ps1, ps2, ps3が出現(ps1: 1->3, ps2: 2->3, ps3: 3->2)
+        PlayerSet({Player('passenger', 2, 1, 0); Player('passenger', 3, 1, 0)}); % ps1とps2が出現(ps1: 1->2, ps2: 2->1)
       };
     end
 

@@ -84,22 +84,34 @@ classdef Player
   methods (Static)
     function all_taxis = get_all_taxis()
       all_taxis = {};
-      for node = 1:3
-        for appearance_step = 0:3
-          all_taxis{end+1, 1} = Player('taxi', node, 0, appearance_step);
-        end
+      % In general case, use this
+      % for node = 1:3
+      %   for appearance_step = 0:3
+      %     all_taxis{end+1, 1} = Player('taxi', node, 0, appearance_step);
+      %   end
 
-        if node ~= 2
-          all_taxis{end+1, 1} = Player('taxi', node, 0, 4);
-        end
-      end
+      %   if node ~= 2
+      %     all_taxis{end+1, 1} = Player('taxi', node, 0, 4);
+      %   end
+      % end
+
+      % If p and p_ are special matrices, hard code
+      all_taxis{end+1, 1} = Player('taxi', 1, 0, 0);
+      all_taxis{end+1, 1} = Player('taxi', 1, 0, 1);
+      all_taxis{end+1, 1} = Player('taxi', 1, 0, 2);
+      all_taxis{end+1, 1} = Player('taxi', 1, 0, 3);
+      all_taxis{end+1, 1} = Player('taxi', 1, 0, 4); 
     end
 
     function all_passengers = get_all_passengers()
+      [~, ~, ~, ~, p, p_, ~, ~, ~] = ParamsHelper.getSymbolicParams();
       all_passengers = {};
       for i = 1:3
         for j = 1:3
           if i == j
+            continue
+          end
+          if p(i)*p_(i,j) == 0
             continue
           end
 

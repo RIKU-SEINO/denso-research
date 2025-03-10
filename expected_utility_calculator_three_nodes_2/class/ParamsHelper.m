@@ -11,15 +11,15 @@ classdef ParamsHelper
       % c = sym('c', 'positive');
       c = 100;
       % r_0 = sym('r_', [3, 1], 'positive');
-      r_0 = [1000; 2000; 1000];
+      r_0 = [0; 1500; 1500];
       % a = sym('a_', [3, 1], 'positive');
-      a = [50; 100; 50];
+      a = [0; 50; 50];
       % p = sym('p_', [3, 1], 'positive');
-      p = [0.1; 0.5; 0.1];
+      p = [0; 0.5; 0.5];
       % p_ = sym('p_', [3, 3], 'positive');
-      p_ = [0, 1, 0;
+      p_ = [0, 0, 0;
             1, 0, 0;
-            0, 1, 0];
+            1, 0, 0];
       u = ParamsHelper.calculateTaxiUtilities(c, w);
       r = ParamsHelper.calculatePassengerUtilities(r_0, a);
       q = ParamsHelper.calculateTransitionProbabilityVector(p, p_);
@@ -34,7 +34,7 @@ classdef ParamsHelper
   
     function r = calculatePassengerUtilities(r_0, a) 
       [i, j] = ndgrid(1:3, 1:3);
-      r = r_0(i) - a(j);
+      r = r_0(j) - a(j) * abs(i - j);
       r = sym(r);  % シンボリック変数に変換
     end
 

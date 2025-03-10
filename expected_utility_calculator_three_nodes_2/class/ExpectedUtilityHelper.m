@@ -20,7 +20,7 @@ classdef ExpectedUtilityHelper
           end
 
           if player_set.is_all_taxis_empty_after_just_m_steps(0)
-            var_name = strcat('x_', num2str(j), '_', num2str(i));
+            var_name = strcat('x_', sprintf('%02d', j), '_', sprintf('%02d', i));
             var_names{end+1} = var_name;
             syms(var_name, 'positive');
             x(i, j) = eval(var_name);
@@ -69,14 +69,13 @@ classdef ExpectedUtilityHelper
   
             if player_set.is_all_taxis_empty_after_just_m_steps(m)
               equation = Equation(player, player_set, x);
-              value = equation.right_side;
+              value = equation.calculate_right_side();
               if isAlways(value == 0)
                 disp("expected utility is 0 for " + player.id + " in " + player_set.id);
                 error('プレイヤは存在しているが、期待効用が0です');
               end
-              x(i, j) = value;
               % x(i,j)の数式から、x_%d+_%d+にマッチする部分を全て取得する
-              matched_vars = regexp(char(x(i, j)), 'x_\d+_\d+', 'match');
+              matched_vars = regexp(char(value), 'x_\d+_\d+', 'match');
               if isempty(matched_vars)
                 assignin('base', 'x', x);
                 assignin('base', 'i', i);
@@ -86,10 +85,16 @@ classdef ExpectedUtilityHelper
               %  matched_varsのうち、一つでもvar_namesに含まれていないものがあればエラー
               for k = 1:length(matched_vars)
                 if ~ismember(matched_vars{k}, var_names)
+                  assignin('base', 'x', x);
+                  assignin('base', 'i', i);
+                  assignin('base', 'j', j);
+                  assignin('base', 'player', player);
+                  assignin('base', 'player_set', player_set);
                   disp(matched_vars{k} + " is not in " + strjoin(var_names, ', '));
                   error('未定義の変数が参照されています');
                 end
               end
+              x(i, j) = value;
             end            
           end
         end

@@ -1,47 +1,51 @@
 clear;
 
 addpath('./class');
+warning('off', 'all');
 
 disp('Generate expected utility matrix (y/n): ')
-generate_x = input('','s') == 'y';
+generate_x = input('', 's') == 'y';
+disp('Construct expected utility matrix from scratch? (y/n): ');
+construct_expected_utility_matrix = input('', 's') == 'y';
 if generate_x
-  x = ExpectedUtilityHelper.generate_expected_utility_matrix();
-  save('data/data.mat', 'x');
-  writematrix(string(x), 'data/x.csv');
+    x = ExpectedUtilityHelper.generate_expected_utility_matrix();
+    save('data/data.mat', 'x');
+    writematrix(string(x), 'data/x.csv');
+else
+    disp('Load expected utility matrix from data.mat');
+    data = load('data/data.mat', 'x');
+    x = data.x;
 end
 
-% all_player_sets = PlayerSet.get_all_player_sets();
-% all_players = Player.get_all_players();
-% for i = length(all_player_sets):-1:1
-%   player_set = all_player_sets{i};
-%   for j = length(all_players):-1:1
-%     player = all_players{j};
-%     disp(num2str(i) + " / " + num2str(length(all_player_sets)) +", "+ num2str(j) + " / " + num2str(length(all_players)))
-%     disp(player.id + " in " + player_set.id);
-%     equation = Equation(player, player_set);
-%   end
-% end
+% 全ての期待効用方程式を構築する
+if construct_expected_utility_matrix
+  equations = {};
+  all_player_sets = PlayerSet.get_all_player_sets();
+  all_players = Player.get_all_players();
 
+  for i = 1:length(all_players)
+    player = all_players{i};
+    for j = 1:length(all_player_sets)
+      disp(strcat(num2str(i), '/', num2str(length(all_players)), ', ', num2str(j), '/', num2str(length(all_player_sets)), '期待効用方程式を構築中...'));
+      player_set = all_player_sets{j};
 
-% % 考えられる全てのプレイヤ集合を取得
-% all_player_sets = PlayerSet.get_all_player_sets();
-% for i = 1:length(all_player_sets)
-%   player_set = all_player_sets{i};
+      if ~player_set.is_present(player)
+          continue;
+      end
+      
+      if ~player_set.is_all_taxis_empty_after_just_m_steps(0)
+          continue;
+      end
 
-%   if isempty(player_set.get_empty_taxis())
-%     continue;
-%   end
-%   disp("--------------------");
-%   disp(string(i) + "/" + string(length(all_player_sets)));
+      equation = Equation(player, player_set, x);
+      equations{end+1} = equation;
+    end
+  end
 
-    
-%   [player_matching_candidates, expected_utility_sum_candidates] = player_set.get_player_matching_candidates();
-%   for k = 1:length(player_matching_candidates)
-%     player_matching = player_matching_candidates{k};
-%     expected_utility_sum = expected_utility_sum_candidates(k);
-%     % player_matching.idはchar
-%     % expected_utility_sumはsymであることに注意。doubleには変換できない。
-%     % disp(player_matching.id + ": " + expected_utility_sum);だとエラーになる
-%     disp(player_matching.id + ": " + char(expected_utility_sum));
-%   end
-% end
+  save('data/equations.mat', 'equations');
+else
+  disp('Load equations from equations.mat');
+  data = load('data/equations.mat', 'equations');
+  equations = data.equations;
+end
+
