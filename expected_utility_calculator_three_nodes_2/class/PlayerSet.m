@@ -240,15 +240,6 @@ classdef PlayerSet
           player = obj.players{i};
           expected_utilities(player.index()) = ExpectedUtilityHelper.get_expected_utility(player, obj, x);
       end
-  end
-
-    % プレイヤ集合から考えられるマッチングの候補と期待効用和の候補
-    function [player_matching_candidates, expected_utilities_candidates] = get_player_matching_candidates_info(obj)
-      player_matching_candidates = obj.get_all_player_matchings();
-      expected_utilities_candidates = cell(length(player_matching_candidates), 1);
-      for i = 1:length(player_matching_candidates)
-        expected_utilities_candidates(i) = player_matching_candidates{i}.calculate_expected_utilities();
-      end
     end
   end
 

@@ -68,8 +68,8 @@ classdef ExpectedUtilityHelper
             end
   
             if player_set.is_all_taxis_empty_after_just_m_steps(m)
-              equation = Equation(player, player_set, x);
-              value = equation.calculate_right_side();
+              equation = Equation(player, player_set);
+              value = equation.calculate_right_side(x);
               if isAlways(value == 0)
                 disp("expected utility is 0 for " + player.id + " in " + player_set.id);
                 error('プレイヤは存在しているが、期待効用が0です');
