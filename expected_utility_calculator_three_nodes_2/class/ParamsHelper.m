@@ -11,17 +11,15 @@ classdef ParamsHelper
       c = sym('c', 'positive');
       assume(c < w/2);
       % c = 100;
-      % r_0 = sym('r_', [3, 1], 'positive');
-      syms r_2 'real' 'positive';
-      syms r_3 'real' 'positive';
-      r_0 = [0; r_2; r_3];
+      r_0 = sym('r_', [3, 1], 'positive');
+      % syms r_2 'real' 'positive';
+      % syms r_3 'real' 'positive';
+      % r_0 = [0; r_2; r_3];
       % r_0 = [0; 1500; 1500];
-      % a = sym('a_', [3, 1], 'positive');
-      syms a_2 'real' 'positive';
-      syms a_3 'real' 'positive';
-      a = [0; a_2; a_3];
-      assume(a_2 < r_2);
-      assume(a_3 < r_3);
+      a = sym('a_', [3, 1], 'positive');
+      % syms a_2 'real' 'positive';
+      % syms a_3 'real' 'positive';
+      % a = [0; a_2; a_3];
       % a = [0; 50; 50];
       % p = sym('p_', [3, 1], 'positive');
       syms p_21 'real' 'positive';
@@ -41,15 +39,23 @@ classdef ParamsHelper
     end
 
     function u = calculateTaxiUtilities(c, w)
-      [i, j, k] = ndgrid(1:3, 1:3, 1:3);
-      u = -c * (abs(i - j) + abs(j - k)) + w * abs(j - k);
-      u = sym(u);  % シンボリック変数に変換
+      u = sym(zeros(3, 3, 3));
+      for i = 1:3
+        for j = 1:3
+          for k = 1:3
+            u(i, j, k) = -c * (abs(i - j) + abs(j - k)) + w * abs(j - k);
+          end
+        end
+      end
     end
   
     function r = calculatePassengerUtilities(r_0, a) 
-      [i, j] = ndgrid(1:3, 1:3);
-      r = r_0(j) - a(j) * abs(i - j);
-      r = sym(r);  % シンボリック変数に変換
+      r = sym(zeros(3, 3));
+      for i = 1:3
+        for j = 1:3
+          r(i, j) = r_0(j) - abs(i -j)*a(j);
+        end
+      end
     end
 
     function transitionProbabilityVector = calculateTransitionProbabilityVector(p, p_)

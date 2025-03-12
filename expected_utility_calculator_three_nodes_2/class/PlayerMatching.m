@@ -40,6 +40,30 @@ classdef PlayerMatching
       player_set = PlayerSet(player_set);
     end
 
+    % マッチングによって"置き換わる前"と"置き換わった後"のプレイヤを返す。あくまで置き換わったプレイヤであり、削除されたプレイヤは含まれない。もちろん、置き換わっていないプレイヤも含まれる
+    function [players_before_replaced, players_after_replaced] = get_players_before_and_after_replaced(obj)
+      players_before_replaced = {};
+      players_after_replaced = {};
+      for i = 1:length(obj.player_pairs)
+        player_pair = obj.player_pairs{i};
+        if player_pair.is_matched()
+          for j = 1:length(player_pair.players)
+            player = player_pair.players{j};
+            if player.is_taxi()
+              players_before_replaced{end+1, 1} = player;
+              break;
+            end
+          end
+          remained_player = player_pair.get_remained_player_after_matching_of_pair();
+          players_after_replaced{end+1, 1} = remained_player;
+        else % マッチングで取り残されたプレイヤは、置き換えられる前と置き換えられた後が同じ
+          remained_player = player_pair.get_remained_player_after_matching_of_pair();
+          players_before_replaced{end+1, 1} = remained_player;
+          players_after_replaced{end+1, 1} = remained_player;
+        end
+      end
+    end
+
     % calculate expected utility for each player after matching
     function values = calculate_expected_utilities(obj, x)
       % persistent cached_data; % キャッシュを保持する変数 (persistent)
@@ -56,13 +80,24 @@ classdef PlayerMatching
       player_set_after_matching = obj.get_player_set_after_matching();
       
       % 2つに分けて計算をする
-      % 1. マッチング後残ったプレイヤの期待効用
-      values = player_set_after_matching.get_expected_utilities(x);
-      % 2. マッチングで組まれたプレイヤの効用
+      all_players = Player.get_all_players();
+      values = sym(zeros(length(all_players), 1));
+      % 1. マッチングで組まれたプレイヤの効用
       for i = 1:length(obj.player_pairs)
         player_pair = obj.player_pairs{i};
         values = values + player_pair.get_utilities();
       end
+      % 2. マッチングが組まれた後のプレイヤ集合における期待効用
+      values_after_matched_player_set = player_set_after_matching.get_expected_utilities(x);
+      [players_before_replaced, players_after_replaced] = obj.get_players_before_and_after_replaced();
+      for i = 1:length(players_before_replaced)
+        player_before_replaced = players_before_replaced{i};
+        player_after_replaced = players_after_replaced{i};
+        idx = player_before_replaced.index();
+        values(idx) = values(idx) + values_after_matched_player_set(player_after_replaced.index());
+      end
+
+
       % 補足: 1.と2.の両方に該当するプレイヤもいる。例えば、タクシーは乗客と組まれた2.に該当するが、その後目的地までの移動後を考えて、1.にも該当する。
     end
 

@@ -53,7 +53,7 @@ classdef Equation
     function right_vec = calculate_right_vec_specify_condition(obj, x, conditions)
       right_vec = obj.calculate_right_vec(x);
       for i = 1:length(right_vec)
-        if isequal(right_vec(i), 0)
+        if isequal(right_vec(i), sym(0))
           continue;
         end
 
@@ -105,6 +105,7 @@ classdef Equation
     function sol = solve_equations(objs, x, conditions)
       eqs = [];
       all_vars = [];
+      disp("期待効用方程式")
       for i = 1:length(objs)
         equation = objs{i};
         right_side = equation.calculate_right_side_specify_condition(x, conditions);
@@ -112,7 +113,11 @@ classdef Equation
         player_set = equation.player_set;
         x_sym = symvar(x(player_set.index(), player.index()));
         all_vars = union(all_vars, x_sym);
-        eqs = [eqs, x(player_set.index(), player.index()) == right_side];
+        eq = x_sym == right_side;
+        eqs = [eqs, eq];
+      end
+      for i = 1:length(eqs)
+        disp(string(collect(eqs(i), all_vars)));
       end
 
       sol = solve(eqs, all_vars, "ReturnConditions", true);
@@ -144,11 +149,12 @@ classdef Equation
         if isempty(evaluated_condition)
           continue;
         end
+        disp('パラメータ制約: ' + string(sol.conditions));
         if ~ismember('&', char(evaluated_condition))
-          diff_expr = lhs(evaluated_condition) - rhs(evaluated_condition);
-          factored_expr = prod(factor(diff_expr));
+          lhs_expr = prod(factor(lhs(evaluated_condition)));
+          rhs_expr = prod(factor(rhs(evaluated_condition)));
           if ~isAlways(evaluated_condition)
-            disp('パラメータ制約: ' + string(factored_expr) + ' <= 0');
+            disp('パラメータ制約: ' + string(lhs_expr) + ' <= ' + string(rhs_expr));
           end
           continue;
         end
@@ -157,11 +163,9 @@ classdef Equation
         for j = 1:length(evaluated_condition_elems)
           evaluated_condition_elem = evaluated_condition_elems{j};
           if ~isAlways(evaluated_condition_elem)
-            diff_expr = lhs(evaluated_condition_elem) - rhs(evaluated_condition_elem);
-            factored_expr = prod(factor(diff_expr));
-            if ~isAlways(evaluated_condition_elem)
-              disp('パラメータ制約: ' + string(factored_expr) + ' <= 0');
-            end
+            lhs_expr = prod(factor(lhs(evaluated_condition_elem)));
+            rhs_expr = prod(factor(rhs(evaluated_condition_elem)));
+            disp('パラメータ制約: ' + string(lhs_expr) + ' <= ' + string(rhs_expr));
           end
         end
       end

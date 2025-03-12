@@ -67,9 +67,11 @@ end
 
 
 for i = 1:length(all_conditions)
-  equations = {};
+  % equations = {};
+  equations_v1 = {};
+  equations_ps2 = {};
+  equations_ps3 = {};
   conditions = all_conditions{i};
-  disp(strcat(num2str(i), '/', num2str(length(all_conditions)), ': 特定の条件下での解を計算中...'));
   for j = 1:length(all_player_sets)
     player_set = all_player_sets{j};
     for k = 1:length(all_players)
@@ -83,14 +85,28 @@ for i = 1:length(all_conditions)
       end
 
       equation = Equation(player, player_set);
-      equations{end+1, 1} = equation;
+      if player.is_taxi()
+        equations_v1{end+1, 1} = equation;
+      elseif player.is_passenger() && player.node == 2
+        equations_ps2{end+1, 1} = equation;
+      elseif player.is_passenger() && player.node == 3
+        equations_ps3{end+1, 1} = equation;
+      end
     end
   end
-  sol = Equation.solve_equations(equations, x, conditions);
-  sol
-  Equation.validate_sol(sol, conditions);
-  disp('マッチング制約: ')
-  disp(conditions)
+  disp("マッチング集合" + num2str(i) + "の条件下での解を計算中...")
+  disp("条件")
+  for j = 1:length(conditions)
+    disp(conditions(j));
+  end
+  % sol = Equation.solve_equations(equations, x, conditions);
+  sol_v1 = Equation.solve_equations(equations_v1, x, conditions);
+  sol_v1
+  sol_ps2 = Equation.solve_equations(equations_ps2, x, conditions);
+  sol_ps2
+  sol_ps3 = Equation.solve_equations(equations_ps3, x, conditions);
+  sol_ps3
+  % Equation.validate_sol(sol, conditions);
   disp('---------------------------------')
 end
 
