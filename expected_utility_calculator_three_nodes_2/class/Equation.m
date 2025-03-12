@@ -95,17 +95,16 @@ classdef Equation
       % 対応するピースを探す
       for i = 1:num_pieces
           condition = pieces{i, 2}; % 条件部分
-          if isequal(simplify(condition == target_condition), symtrue)
+          if isAlways(simplify(condition) == simplify(target_condition))
               value = pieces{i, 1}; % そのピースの値
               return;
           end
       end
     end
 
-    function sol = solve_equations(objs, x, conditions)
+    function [eqs, all_vars] = build_equations(objs, x, conditions)
       eqs = [];
       all_vars = [];
-      disp("期待効用方程式")
       for i = 1:length(objs)
         equation = objs{i};
         right_side = equation.calculate_right_side_specify_condition(x, conditions);
@@ -116,11 +115,14 @@ classdef Equation
         eq = x_sym == right_side;
         eqs = [eqs, eq];
       end
-      for i = 1:length(eqs)
-        disp(string(collect(eqs(i), all_vars)));
-      end
 
-      sol = solve(eqs, all_vars, "ReturnConditions", true);
+      for i = 1:length(eqs)
+        eqs(i) = collect(eqs(i), all_vars);
+      end
+    end
+
+    function sol = solve_equations(eqs, all_vars)
+      sol = solve(eqs, all_vars);
       % 各フィールドのうち、paramtersとconfitions以外をfactorする
       all_vars = fieldnames(sol);
       exclude_vars = {'parameters', 'conditions'};
@@ -134,8 +136,8 @@ classdef Equation
       end
     end
 
-    function validate_sol(sol, conditions)
-      % 余分なフィールドを除外
+    function constraints = validate_sol(sol, conditions)
+      constraints = {};
       all_vars = fieldnames(sol);
       exclude_vars = {'parameters', 'conditions'};
       vars = setdiff(all_vars, exclude_vars);
@@ -149,12 +151,11 @@ classdef Equation
         if isempty(evaluated_condition)
           continue;
         end
-        disp('パラメータ制約: ' + string(sol.conditions));
         if ~ismember('&', char(evaluated_condition))
           lhs_expr = prod(factor(lhs(evaluated_condition)));
           rhs_expr = prod(factor(rhs(evaluated_condition)));
           if ~isAlways(evaluated_condition)
-            disp('パラメータ制約: ' + string(lhs_expr) + ' <= ' + string(rhs_expr));
+            constraints{end+1, 1} = lhs_expr <= rhs_expr;
           end
           continue;
         end
@@ -165,7 +166,7 @@ classdef Equation
           if ~isAlways(evaluated_condition_elem)
             lhs_expr = prod(factor(lhs(evaluated_condition_elem)));
             rhs_expr = prod(factor(rhs(evaluated_condition_elem)));
-            disp('パラメータ制約: ' + string(lhs_expr) + ' <= ' + string(rhs_expr));
+            constraints{end+1, 1} = lhs_expr <= rhs_expr;
           end
         end
       end

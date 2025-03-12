@@ -206,13 +206,18 @@ classdef PlayerSet
       taxi_candidates = obj.get_empty_taxis();
       passenger_candidates = obj.get_passengers();
 
-      % 出現確率が0ではないが、乗客が出現していないノードが存在する、もしくは、出現確率が0でない全てのノードに乗客が出現していても、タクシーが満車の状態では、誰もマッチングしないというマッチングも考える
-      if ~obj.is_all_possible_passenger_present() || isempty(taxi_candidates)
-        for i = 1:length(obj.players)
-          player_pairs{end+1, 1} = PlayerPair({obj.players{i}});
-        end
-        all_player_matchings{end+1, 1} = PlayerMatching(player_pairs);
+      % % 出現確率が0ではないが、乗客が出現していないノードが存在する、もしくは、出現確率が0でない全てのノードに乗客が出現していても、タクシーが満車の状態では、誰もマッチングしないというマッチングも考える
+      % if ~obj.is_all_possible_passenger_present() || isempty(taxi_candidates)
+      %   for i = 1:length(obj.players)
+      %     player_pairs{end+1, 1} = PlayerPair({obj.players{i}});
+      %   end
+      %   all_player_matchings{end+1, 1} = PlayerMatching(player_pairs);
+      % end
+      % より一般化をするため、ifを削除
+      for i = 1:length(obj.players)
+        player_pairs{end+1, 1} = PlayerPair({obj.players{i}});
       end
+      all_player_matchings{end+1, 1} = PlayerMatching(player_pairs);
 
       if isempty(taxi_candidates) || isempty(passenger_candidates)
         return

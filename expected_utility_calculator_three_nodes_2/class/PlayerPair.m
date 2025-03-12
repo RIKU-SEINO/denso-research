@@ -100,7 +100,7 @@ classdef PlayerPair
     end
 
     function utilities = get_utilities(obj)
-      [~, ~, ~, a, ~, ~, u, r, ~] = ParamsHelper.getSymbolicParams();
+      [~, c, ~, a, ~, ~, u, r, ~] = ParamsHelper.getSymbolicParams();
 
       all_players = Player.get_all_players();
       utilities = sym(zeros(length(all_players), 1));
@@ -118,6 +118,9 @@ classdef PlayerPair
       elseif obj.is_included_passenger()
         j = passenger.node;
         utilities(passenger.index()) = -a(j);
+      % これを入れるかどうかはまだ検討中
+      % elseif obj.is_included_taxi() && taxi.appearance_step == 0
+      %   utilities(taxi.index()) = -c;
       end
     end
   end

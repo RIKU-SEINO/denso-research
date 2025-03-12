@@ -46,7 +46,7 @@ classdef PlayerMatching
       players_after_replaced = {};
       for i = 1:length(obj.player_pairs)
         player_pair = obj.player_pairs{i};
-        if player_pair.is_matched()
+        if player_pair.is_matched() % matchしている場合は、taxiが置き換わる
           for j = 1:length(player_pair.players)
             player = player_pair.players{j};
             if player.is_taxi()
@@ -56,7 +56,7 @@ classdef PlayerMatching
           end
           remained_player = player_pair.get_remained_player_after_matching_of_pair();
           players_after_replaced{end+1, 1} = remained_player;
-        else % マッチングで取り残されたプレイヤは、置き換えられる前と置き換えられた後が同じ
+        else % matchしていない場合は、taxi, passengerに関わらず、beforeとafterが同じ
           remained_player = player_pair.get_remained_player_after_matching_of_pair();
           players_before_replaced{end+1, 1} = remained_player;
           players_after_replaced{end+1, 1} = remained_player;
@@ -89,15 +89,14 @@ classdef PlayerMatching
       end
       % 2. マッチングが組まれた後のプレイヤ集合における期待効用
       values_after_matched_player_set = player_set_after_matching.get_expected_utilities(x);
-      [players_before_replaced, players_after_replaced] = obj.get_players_before_and_after_replaced();
-      for i = 1:length(players_before_replaced)
-        player_before_replaced = players_before_replaced{i};
-        player_after_replaced = players_after_replaced{i};
-        idx = player_before_replaced.index();
-        values(idx) = values(idx) + values_after_matched_player_set(player_after_replaced.index());
-      end
-
-
+      % [players_before_replaced, players_after_replaced] = obj.get_players_before_and_after_replaced();
+      % for i = 1:length(players_before_replaced)
+      %   player_before_replaced = players_before_replaced{i};
+      %   player_after_replaced = players_after_replaced{i};
+      %   idx = player_before_replaced.index();
+      %   values(idx) = values(idx) + values_after_matched_player_set(player_after_replaced.index());
+      % end
+      values = values + values_after_matched_player_set;
       % 補足: 1.と2.の両方に該当するプレイヤもいる。例えば、タクシーは乗客と組まれた2.に該当するが、その後目的地までの移動後を考えて、1.にも該当する。
     end
 

@@ -77,6 +77,7 @@ classdef ExpectedUtilityHelper
               % x(i,j)の数式から、x_%d+_%d+にマッチする部分を全て取得する
               matched_vars = regexp(char(value), 'x_\d+_\d+', 'match');
               if isempty(matched_vars)
+                assignin('base', 'value', value);
                 assignin('base', 'x', x);
                 assignin('base', 'i', i);
                 assignin('base', 'j', j);

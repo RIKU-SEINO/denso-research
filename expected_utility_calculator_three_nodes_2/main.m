@@ -24,6 +24,7 @@ if construct_expected_utility_matrix
   condition_candidates_set = {};
   equations_set = {};
 
+  fid = fopen('data/condition_candidates.txt', 'w');
   for i = 1:length(all_players)
     player = all_players{i};
     for j = 1:length(all_player_sets)
@@ -48,13 +49,12 @@ if construct_expected_utility_matrix
           condition = condition_candidates{k};
           player_matching = player_matching_set.player_matchings{k};
           % matching_set_id -> matching_id: conditionというフォーマットで保存
-          fid = fopen('data/condition_candidates.txt', 'a');
           fprintf(fid, '%s -> %s: %s\n\n', player_matching_set.id(), player_matching.id(), char(condition));
-          fclose(fid);
         end
       end
     end
   end
+  fclose(fid);
 
   all_conditions = generate_all_matching_combinations(condition_candidates_set);
 
@@ -65,7 +65,7 @@ else
   all_conditions = data.all_conditions;
 end
 
-
+fid = fopen('data/solutions.txt', 'w');
 for i = 1:length(all_conditions)
   % equations = {};
   equations_v1 = {};
@@ -95,18 +95,58 @@ for i = 1:length(all_conditions)
     end
   end
   disp("マッチング集合" + num2str(i) + "の条件下での解を計算中...")
+  fprintf(fid, "マッチング集合" + num2str(i) + "の条件下での解\n");
   disp("条件")
+  fprintf(fid, "条件\n");
   for j = 1:length(conditions)
-    disp(conditions(j));
+    disp(j + ":  " + string(conditions(j)));
+    fprintf(fid, j + ":  " + string(conditions(j)) + "\n");
+    fprintf(fid, "\n");
   end
-  % sol = Equation.solve_equations(equations, x, conditions);
-  sol_v1 = Equation.solve_equations(equations_v1, x, conditions);
-  sol_v1
-  sol_ps2 = Equation.solve_equations(equations_ps2, x, conditions);
-  sol_ps2
-  sol_ps3 = Equation.solve_equations(equations_ps3, x, conditions);
-  sol_ps3
-  % Equation.validate_sol(sol, conditions);
+  disp("期待効用方程式")
+  fprintf(fid, "期待効用方程式\n");
+  disp("v1")
+  fprintf(fid, "v1\n");
+  [eqs_v1, all_vars_v1] = Equation.build_equations(equations_v1, x, conditions);
+  for j = 1:length(eqs_v1)
+    disp(eqs_v1(j));
+    fprintf(fid, string(eqs_v1(j)) + "\n");
+  end
+  sol_v1 = Equation.solve_equations(eqs_v1, all_vars_v1)
+
+  disp("ps2")
+  fprintf(fid, "ps2\n");
+  [eqs_ps2, all_vars_ps2] = Equation.build_equations(equations_ps2, x, conditions);
+  for j = 1:length(eqs_ps2)
+    disp(eqs_ps2(j));
+    fprintf(fid, string(eqs_ps2(j)) + "\n");
+  end
+  sol_ps2 = Equation.solve_equations(eqs_ps2, all_vars_ps2)
+  sol = merge_structs(sol_v1, sol_ps2);
+
+  disp("ps3")
+  fprintf(fid, "ps3\n");
+  [eqs_ps3, all_vars_ps3] = Equation.build_equations(equations_ps3, x, conditions);
+  for j = 1:length(eqs_ps3)
+    disp(eqs_ps3(j));
+    fprintf(fid, string(eqs_ps3(j)) + "\n");
+  end
+  sol_ps3 = Equation.solve_equations(eqs_ps3, all_vars_ps3)
+  sol = merge_structs(sol, sol_ps3);
+  fields = fieldnames(sol);
+  fprintf(fid, "\n解\n");
+  for ii = 1:numel(fields)
+    value = sol.(fields{ii});  % フィールドの値を取得
+    fprintf(fid, '%s: %s\n', fields{ii}, string(value));  
+  end
+  constraints = Equation.validate_sol(sol, conditions);
+  disp("制約条件")
+  fprintf(fid, "\n制約条件\n");
+  for j = 1:length(constraints)
+    disp(constraints{j});
+    fprintf(fid, string(constraints{j}) + "\n");
+  end
+  fprintf(fid, "---------------------------------\n\n\n");
   disp('---------------------------------')
 end
 
@@ -161,5 +201,13 @@ function result = ismember_condition_candidates(condition_candidates, condition_
       result = true;
       return;
     end
+  end
+end
+
+function merged = merge_structs(s1, s2)
+  merged = s1;
+  fields = fieldnames(s2);
+  for i = 1:numel(fields)
+      merged.(fields{i}) = s2.(fields{i});
   end
 end
