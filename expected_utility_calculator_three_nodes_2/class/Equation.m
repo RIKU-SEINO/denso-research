@@ -137,6 +137,9 @@ classdef Equation
     end
 
     function constraints = validate_sol(sol, conditions)
+      [w, c, r_0, a, ~, ~, ~, ~, ~] = ParamsHelper.getSymbolicParams();
+      params = [w, c, r_0(1), r_0(2), r_0(3), a(1), a(2), a(3)];
+      params = params(~isAlways(params == 0));
       constraints = {};
       all_vars = fieldnames(sol);
       exclude_vars = {'parameters', 'conditions'};
@@ -152,10 +155,10 @@ classdef Equation
           continue;
         end
         if ~ismember('&', char(evaluated_condition))
-          lhs_expr = prod(factor(lhs(evaluated_condition)));
-          rhs_expr = prod(factor(rhs(evaluated_condition)));
+          diff_expr = lhs(evaluated_condition) - rhs(evaluated_condition);
+          diff_expr = Equation.collect_by_vars(diff_expr, params);
           if ~isAlways(evaluated_condition)
-            constraints{end+1, 1} = lhs_expr <= rhs_expr;
+            constraints{end+1, 1} = diff_expr <= 0;
           end
           continue;
         end
@@ -164,12 +167,30 @@ classdef Equation
         for j = 1:length(evaluated_condition_elems)
           evaluated_condition_elem = evaluated_condition_elems{j};
           if ~isAlways(evaluated_condition_elem)
-            lhs_expr = prod(factor(lhs(evaluated_condition_elem)));
-            rhs_expr = prod(factor(rhs(evaluated_condition_elem)));
-            constraints{end+1, 1} = lhs_expr <= rhs_expr;
+            diff_expr = lhs(evaluated_condition_elem) - rhs(evaluated_condition_elem);
+            diff_expr = Equation.collect_by_vars(diff_expr, params);
+            constraints{end+1, 1} = diff_expr <= 0;
           end
         end
       end
+    end
+
+    function collected_expr = collect_by_vars(expr, vars)
+      collected_expr = sym(0);
+      not_collected_by_var = expr;
+      for i = 1:length(vars)
+        var = vars(i);
+        [terms, coeffs_var] = coeffs(not_collected_by_var, var);
+        if length(terms) > 2
+          error('多項式の次数が2以上です');
+        end
+        factored_terms = arrayfun(@(t) prod(factor(t)), terms, 'UniformOutput', false);
+        collected_by_var = coeffs_var .* isAlways(coeffs_var == var) * factored_terms';
+        not_collected_by_var = coeffs_var .* ~isAlways(coeffs_var == var) * factored_terms';
+        collected_expr = collected_expr + collected_by_var;
+      end
+
+      collected_expr = collected_expr + not_collected_by_var;
     end
   end
 end
