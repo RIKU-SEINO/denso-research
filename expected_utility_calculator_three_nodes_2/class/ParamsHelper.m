@@ -22,11 +22,11 @@ classdef ParamsHelper
       % a = [0; a_2; a_3];
       % a = [0; 50; 50];
       % p = sym('p_', [3, 1], 'positive');
-      syms p_21 'real' 'positive';
-      syms p_31 'real' 'positive';
-      p = [0; p_21; p_31];
-      assume(p_21 <= 1);
-      assume(p_31 <= 1);
+      syms p_2 'real' 'positive';
+      syms p_3 'real' 'positive';
+      p = [0; p_2; p_3];
+      assume(p_2 <= 1);
+      assume(p_3 <= 1);
       % p = [0; 0.5; 0.5];
       % p_ = sym('p_', [3, 3], 'positive');
       p_ = [0, 0, 0;
