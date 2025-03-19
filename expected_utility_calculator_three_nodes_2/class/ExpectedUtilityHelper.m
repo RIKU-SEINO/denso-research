@@ -146,5 +146,79 @@ classdef ExpectedUtilityHelper
       player_set_index = player_set.index();
       expected_utility = x(player_set_index, player_index);
     end
+
+    % 期待効用の計算結果を表示する関数
+    function show_result(x, sol, conditions)
+      [w, c, r_0, a, p, p_] = ParamsHelper.getSymbolicParams();
+      params = [w, c, r_0(1), r_0(2), r_0(3), a(1), a(2), a(3), p(1), p(2), p(3), ...
+                p_(1,1), p_(1,2), p_(1,3), p_(2,1), p_(2,2), p_(2,3), p_(3,1), p_(3,2), p_(3,3)];
+      [w_v, c_v, r_0_v, a_, p_v, p__v] = ParamsHelper.getValuedParams();
+      params_valued = [w_v, c_v, r_0_v(1), r_0_v(2), r_0_v(3), a_(1), a_(2), a_(3), p_v(1), p_v(2), p_v(3), ...
+                       p__v(1,1), p__v(1,2), p__v(1,3), p__v(2,1), p__v(2,2), p__v(2,3), p__v(3,1), p__v(3,2), p__v(3,3)];
+  
+      is_valid = Equation.is_valid_sol(sol);
+      if ~is_valid
+          return;
+      end
+  
+      constraints = Equation.validate_sol(sol, conditions);
+      for i = 1:length(constraints)
+        constraint = constraints{i};
+        constraint_evaluated = subs(constraint, params, params_valued);
+        if ~isAlways(constraint_evaluated)
+          fprintf('条件%d: %sは満たされていません\n', i, char(constraint));
+          fprintf(char(constraint_evaluated));
+          return;
+        end
+      end
+
+      disp(fprintf('次の解は次の条件を満たすことを確認しました'));
+      disp(sol);
+      disp(conditions);
+  
+      x_valued = subs(subs(x, sol), params, params_valued);
+  
+      all_player_sets = PlayerSet.get_all_player_sets();
+      all_players = Player.get_all_players();
+      num_players = length(all_players);
+      num_player_sets = length(all_player_sets);
+      
+      % 1つのfigureを作成
+      figure;
+      
+      % サブプロットの行数・列数を決定（できるだけ正方形に近づける）
+      num_cols = 5;
+      num_rows = ceil(num_player_sets / num_cols);
+  
+      for i = 1:num_player_sets
+        player_set = all_player_sets{i};
+        
+        % 各 player_set に対する期待効用を格納
+        expected_utilities = zeros(1, num_players);
+        
+        for j = 1:num_players
+            expected_utilities(j) = x_valued(i, j);
+        end
+        
+        % subplot でグラフを配置
+        subplot(num_rows, num_cols, i);
+        bar(expected_utilities);
+        
+        % 軸とタイトルの設定
+        title(sprintf('%s', player_set.id()));
+        xticklabels(Player.ids(all_players));
+        xtickangle(45);
+        ylim([0, 5000]);
+        grid on;
+
+        for j = 1:num_players
+          if (expected_utilities(j) == 0)
+            continue;
+          end
+          text(j, expected_utilities(j) + 0.02, sprintf('%.3f', expected_utilities(j)), ...
+               'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 10);
+        end
+      end
+    end
   end
 end
