@@ -38,6 +38,23 @@ classdef ParamsHelper
       cached_params = {w, c, r_0, a, p, p_, u, r, q};
     end
 
+    function [w, c, r_0, a, p, p_] = getValuedParams()
+      persistent cached_params_valued;
+      if ~isempty(cached_params_valued)
+        [w, c, r_0, a, p, p_] = cached_params_valued{:};
+        return;
+      end
+      w = 2000;
+      c = 100;
+      r_0 = [0; 1500; 1500];
+      a = [0; 10; 100];
+      p = [0; 0.5; 0.5];
+      p_ = [0, 0, 0;
+            1, 0, 0;
+            1, 0, 0];
+      cached_params_valued = {w, c, r_0, a, p, p_};
+    end
+
     function u = calculateTaxiUtilities(c, w)
       u = sym(zeros(3, 3, 3));
       for i = 1:3
