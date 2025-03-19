@@ -192,5 +192,19 @@ classdef Equation
 
       collected_expr = collected_expr + not_collected_by_var;
     end
+
+    function result = is_valid_sol(sol)
+      all_vars = fieldnames(sol);
+      exclude_vars = {'parameters', 'conditions'};
+      vars = setdiff(all_vars, exclude_vars);
+      values = cellfun(@(f) sol.(f), vars, 'UniformOutput', false);
+      result = true;
+      for i = 1:length(values)
+        if isempty(values{i})
+          result = false;
+          break;
+        end
+      end
+    end
   end
 end
