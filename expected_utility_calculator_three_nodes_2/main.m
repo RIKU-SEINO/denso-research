@@ -133,8 +133,9 @@ for i = 1:length(all_conditions)
   end
   sol_ps3 = Equation.solve_equations(eqs_ps3, all_vars_ps3)
   sol = merge_structs(sol, sol_ps3);
+  is_valid = Equation.is_valid_sol(sol);
   fields = fieldnames(sol);
-  fprintf(fid, "\n解\n");
+  fprintf(fid, "\n解: %s\n", string(is_valid));
   for ii = 1:numel(fields)
     value = sol.(fields{ii});  % フィールドの値を取得
     fprintf(fid, '%s: %s\n', fields{ii}, string(value));  
@@ -146,6 +147,7 @@ for i = 1:length(all_conditions)
     disp(constraints{j});
     fprintf(fid, string(constraints{j}) + "\n");
   end
+  ExpectedUtilityHelper.show_result(x, sol, conditions);
   fprintf(fid, "---------------------------------\n\n\n");
   disp('---------------------------------')
 end
