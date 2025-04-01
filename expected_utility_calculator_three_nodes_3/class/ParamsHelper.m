@@ -1,9 +1,9 @@
 classdef ParamsHelper
   methods (Static)
-    function [w, c, r, a, p, p_, u_v, u_ps, q] = get_symbolic_params()
+    function [w, c, r, a, p, p_, g, u_v, u_ps, q] = get_symbolic_params()
       persistent cached_params;
       if ~isempty(cached_params)
-        [w, c, r, a, p, p_, u_v, u_ps, q] = cached_params{:};
+        [w, c, r, a, p, p_, g, u_v, u_ps, q] = cached_params{:};
         return;
       end
 
@@ -28,19 +28,26 @@ classdef ParamsHelper
             1, 0, 0;
             1, 0, 0];
 
+      g = sym('g', 'positive');
+      assume(0 <= g & g < 1); 
+
       u_v = ParamsHelper.utility_taxi(w);
 
       u_ps = ParamsHelper.utility_passenger(r, a);
 
-      q = ParamsHelper.trans_prob_vec(p, p_);
+      % 一般の場合はtrans_prob_vecを使う
+      % q = ParamsHelper.trans_prob_vec(p, p_);
+      % == Assumption == 
+      % ps_{2,1}またはps_{3,1}のみ出現することを前提としているので、trans_prob_vec_only_ps21_ps31を使う
+      q = ParamsHelper.trans_prob_vec_only_ps21_ps31(p, p_);
 
-      cached_params = {w, c, r, a, p, p_, u_v, u_ps, q};
+      cached_params = {w, c, r, a, p, p_, g, u_v, u_ps, q};
     end
 
-    function [w, c, r, a, p, p_] = get_valued_params()
+    function [w, c, r, a, p, p_, g] = get_valued_params()
       persistent cached_params_valued;
       if ~isempty(cached_params_valued)
-        [w, c, r, a, p, p_] = cached_params_valued{:};
+        [w, c, r, a, p, p_, g] = cached_params_valued{:};
         return;
       end
 
@@ -57,8 +64,10 @@ classdef ParamsHelper
       p_ = [0, 0, 0;
             1, 0, 0;
             1, 0, 0];
+      
+      g = 0.9;
 
-      cached_params_valued = {w, c, r, a, p, p_};
+      cached_params_valued = {w, c, r, a, p, p_, g};
     end
 
     function u_v = utility_taxi(w)
@@ -116,6 +125,18 @@ classdef ParamsHelper
       q(25) = p(1)*p_(1, 3) * p(2)*p_(2, 1) * p(3)*p_(3, 2);
       q(26) = p(1)*p_(1, 2) * p(2)*p_(2, 3) * p(3)*p_(3, 2);
       q(27) = p(1)*p_(1, 3) * p(2)*p_(2, 3) * p(3)*p_(3, 2);
+    end
+
+    function q = trans_prob_vec_only_ps21_ps31(p, p_)
+      q = sym(zeros(4, 1));
+
+      q(1) = (1 - p(1)) * (1 - p(2)) * (1 - p(3));
+
+      q(2) = (1 - p(1)) * p(2)*p_(2, 1) * (1 - p(3));
+
+      q(3) = (1 - p(1)) * (1 - p(2)) * p(3)*p_(3, 1);
+
+      q(4) = (1 - p(1)) * p(2)*p_(2, 1) * p(3)*p_(3, 1);
     end
   end
 end

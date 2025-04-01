@@ -215,7 +215,7 @@ classdef Player
       % all_possible_taxis = Player.get_all_taxis();
 
       % == assumption == 
-      % ノード1でしかタクシーが空車とならず、かつ乗客はノード2もしくはノード3にのみ出現する場合
+      % ノード1でしかタクシーが空車とならず、かつps_{2,1}またはps_{3,1}のみ出現する場合
       all_possible_taxis = {
         Player('v', 1, 0, 0); ...
         Player('v', 1, 0, 1); ...

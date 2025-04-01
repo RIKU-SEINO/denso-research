@@ -100,8 +100,20 @@ classdef PlayerSet
       label = strcat('{', label, '}');
     end
 
-    function result = is_node_occupied(obj, node, type)
-      % 指定したノードが指定のプレイヤtype('v' or 'ps')で占有されているか判定する
+    function index = index(obj)
+      % プレイヤーの集合のインデックスを取得する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   index (int): プレイヤーの集合のインデックス
+
+      index = find(cellfun(@(x) isequal(x, obj), PlayerSet.get_all_possible_player_sets()));
+    end
+
+    function result = is_node_occupied_by_passenger(obj, node)
+      % 指定したノードが乗客で占有されているか判定する
       %
       % Parameters:
       %   obj (PlayerSet): 対象の PlayerSet オブジェクト
@@ -114,7 +126,7 @@ classdef PlayerSet
       result = false;
       for i = 1:length(obj.players)
         player = obj.players{i};
-        if strcmp(player.type, type) && player.node == node
+        if player.node == node && player.is_passenger()
           result = true;
           break
         end
@@ -171,7 +183,7 @@ classdef PlayerSet
         return;
       end
 
-      if obj.is_node_occupied(player.node, player.type)
+      if obj.is_node_occupied_by_passenger(player.node)
         return;
       end
 
@@ -225,8 +237,8 @@ classdef PlayerSet
       % Returns:
       %   obj (PlayerSet): プレイヤーが置き換えられた PlayerSet インスタンス
 
-      obj = obj.remove(player);
       obj = obj.add(new_player);
+      obj = obj.remove(player);      
     end
 
     function obj = one_step_elapsed(obj)
@@ -261,10 +273,10 @@ classdef PlayerSet
       player_set = obj.one_step_elapsed();
 
       % 2. 乗客が出現する
-      all_passenger_sets = PlayerSet.get_all_passenger_sets();
-      player_sets = cell(length(all_passenger_sets), 1);
-      for i = 1:length(all_passenger_sets)
-        player_set_temp = player_set.add_all(all_passenger_sets{i}.players);
+      all_possible_passenger_sets = PlayerSet.get_all_possible_passenger_sets();
+      player_sets = cell(length(all_possible_passenger_sets), 1);
+      for i = 1:length(all_possible_passenger_sets)
+        player_set_temp = player_set.add_all(all_possible_passenger_sets{i}.players);
         player_sets{i} = player_set_temp;
       end
     end
@@ -330,7 +342,7 @@ classdef PlayerSet
       all_taxis = Player.get_all_taxis();
       all_taxi_sets = cell(length(all_taxis), 1); %稼働台数が1台なので、all_taxisの数と同じ
       for i = 1:length(all_taxis)
-        all_taxi_sets{i} = PlayerSet(all_taxis{i});
+        all_taxi_sets{i} = PlayerSet({all_taxis{i}});
       end
     end
 
@@ -347,7 +359,7 @@ classdef PlayerSet
       all_possible_taxis = Player.get_all_possible_taxis();
       all_possible_taxi_sets = cell(length(all_possible_taxis), 1); %稼働台数が1台なので、all_possible_taxisの数と同じ
       for i = 1:length(all_possible_taxis)
-        all_possible_taxi_sets{i} = PlayerSet(all_possible_taxis{i});
+        all_possible_taxi_sets{i} = PlayerSet({all_possible_taxis{i}});
       end
     end
 
@@ -406,6 +418,66 @@ classdef PlayerSet
         PlayerSet({Player('ps', 3, 1, 0)}); % ps3のみ出現(ps3: 3->1)
         PlayerSet({Player('ps', 2, 1, 0); Player('ps', 3, 1, 0)}); % ps2とps3が出現(ps2: 2->1, ps3: 3->1)
       };
+    end
+
+    function all_player_sets = get_all_player_sets()
+      % 全てのプレイヤの集合を取得する
+      %
+      % Parameters: None
+      %
+      % Returns:
+      %   all_player_sets (cell<PlayerSet>): 出現しうる全てのプレイヤの集合
+
+      persistent cached_all_player_sets;
+      if ~isempty(cached_all_player_sets)
+        all_player_sets = cached_all_player_sets;
+        return;
+      end
+
+      all_taxi_sets = PlayerSet.get_all_taxis_sets();
+      all_passenger_sets = PlayerSet.get_all_passenger_sets();
+
+      cached_all_player_sets = {};
+      for i = 1:length(all_taxi_sets)
+        for j = 1:length(all_passenger_sets)
+          taxi_player_set = all_taxi_sets{i};
+          passenger_player_set = all_passenger_sets{j};
+          player_set = taxi_player_set.add_all(passenger_player_set.players);
+          cached_all_player_sets{end + 1, 1} = player_set;
+        end
+      end
+
+      all_player_sets = cached_all_player_sets;
+    end
+
+    function all_possible_player_sets = get_all_possible_player_sets()
+      % 出現しうる全てのプレイヤの集合を取得する
+      %
+      % Parameters: None
+      %
+      % Returns:
+      %   all_possible_player_sets (cell<PlayerSet>): 出現しうる全てのプレイヤの集合
+
+      persistent cached_possible_player_sets;
+      if ~isempty(cached_possible_player_sets)
+        all_possible_player_sets = cached_possible_player_sets;
+        return;
+      end
+
+      all_possible_taxi_sets = PlayerSet.get_all_possible_taxis_sets();
+      all_possible_passenger_sets = PlayerSet.get_all_possible_passenger_sets();
+
+      cached_possible_player_sets = {};
+      for i = 1:length(all_possible_taxi_sets)
+        for j = 1:length(all_possible_passenger_sets)
+          taxi_player_set = all_possible_taxi_sets{i};
+          passenger_player_set = all_possible_passenger_sets{j};
+          player_set = taxi_player_set.add_all(passenger_player_set.players);
+          cached_possible_player_sets{end + 1, 1} = player_set;
+        end
+      end
+
+      all_possible_player_sets = cached_possible_player_sets;
     end
   end
 

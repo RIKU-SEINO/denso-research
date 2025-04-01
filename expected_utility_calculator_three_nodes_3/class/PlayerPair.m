@@ -202,7 +202,7 @@ classdef PlayerPair
       % Returns:
       %   utilities (cell): プレイヤのペアのユーティリティを格納するセル配列
 
-      [~, c, ~, a, ~, ~, u_v, u_ps, ~] = ParamsHelper.get_symbolic_params();
+      [~, c, ~, a, ~, ~, ~, u_v, u_ps, ~] = ParamsHelper.get_symbolic_params();
 
       all_possible_players = Player.get_all_possible_players();
       utilities = sym(zeros(length(all_possible_players), 1));
