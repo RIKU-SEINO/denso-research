@@ -325,6 +325,34 @@ classdef PlayerSet
         player_matchings{end+1, 1} = PlayerMatching(player_pairs); % マッチされたペアを含むマッチング
       end
     end
+
+    function expected_utility = get_optimal_expected_utility(obj)
+      % プレイヤ集合における最適な期待効用を取得する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   expected_utility (sym): プレイヤ集合における最適な期待効用
+
+      player_matchings = obj.get_all_possible_player_matchings();
+      expected_utilities = cellfun(@(x) x.get_expected_utility_sum(), player_matchings, 'UniformOutput', false);
+      expected_utilities = [expected_utilities{:}];
+      
+      piecewise_arg = {};
+      for i = 1:length(expected_utilities)
+        expected_utility = expected_utilities(i);
+        other_expected_utilities = expected_utilities([1:i-1, i+1:end]);
+        expr = symtrue;
+        for j = 1:length(other_expected_utilities)
+          expr = expr & expected_utility >= other_expected_utilities(j);
+        end
+
+        piecewise_arg = [piecewise_arg, {expr, expected_utility}];
+      end
+
+      expected_utility = piecewise(piecewise_arg{:});
+    end
   end
 
   % static methods

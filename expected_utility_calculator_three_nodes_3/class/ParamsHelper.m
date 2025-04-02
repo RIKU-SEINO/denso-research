@@ -44,10 +44,10 @@ classdef ParamsHelper
       cached_params = {w, c, r, a, p, p_, g, u_v, u_ps, q};
     end
 
-    function [w, c, r, a, p, p_, g] = get_valued_params()
+    function [w, c, r, a, p, p_, g, V_init] = get_valued_params()
       persistent cached_params_valued;
       if ~isempty(cached_params_valued)
-        [w, c, r, a, p, p_, g] = cached_params_valued{:};
+        [w, c, r, a, p, p_, g, V_init] = cached_params_valued{:};
         return;
       end
 
@@ -67,7 +67,9 @@ classdef ParamsHelper
       
       g = 0.9;
 
-      cached_params_valued = {w, c, r, a, p, p_, g};
+      V_init = 1000*ones(1, length(VariablesHelper.init_state_values()));
+
+      cached_params_valued = {w, c, r, a, p, p_, g, V_init};
     end
 
     function u_v = utility_taxi(w)
