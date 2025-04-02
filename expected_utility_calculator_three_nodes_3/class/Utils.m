@@ -36,5 +36,28 @@ classdef Utils
         end
       end
     end
+
+    function organized_expr = organize_expr(expr, vars)
+      % シンボリック式exprを整理する
+      % 
+      % Parameters:
+      %   expr (sym): 整理対象の式
+      %   vars (sym[]): くくる変数の配列
+      %
+      % Returns:
+      %   expr (sym): 整理された式
+
+      organized_expr = sym(0);
+      organized_exprs = children(collect(expr, vars));
+      for i = 1:length(organized_exprs)
+        organized_expr = organized_expr + simplify(organized_exprs{i});
+      end
+
+      if ~isequal(simplify(expr - organized_expr), sym(0))
+        assignin('base', 'expr', expr)
+        assignin('base', 'organized_expr', organized_expr)
+        error('整理後の式が整理前と一致していません')
+      end
+    end
   end
 end

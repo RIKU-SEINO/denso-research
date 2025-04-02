@@ -68,24 +68,49 @@ classdef EquationStateValueFunction
 
   % static
   methods (Static)
-    function exprs = exprs_with_pattern(pattern)
+    function equations = build_equations_with_pattern(pattern)
       % 指定したPattern(=最適マッチングの組み合わせ)に基づいて、全てのプレイヤ集合でベルマン方程式を生成する
       % 
       % Parameters:
       %   pattern (Pattern): プレイヤ集合のマッチングの組み合わせ
       % Returns:
-      %   exprs (sym): obj.player_setで指定されたプレイヤ集合に関するベルマン方程式のシンボリック等式のセル配列
+      %   equations (sym): obj.player_setで指定されたプレイヤ集合に関するベルマン方程式のシンボリック等式のセル配列
       fprintf('-------\nパターン %sについてベルマン方程式を構築中...\n', pattern.label);
       all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
-      exprs = sym(zeros(length(all_possible_player_sets), 1));
+      equations = sym(zeros(length(all_possible_player_sets), 1));
       for i = 1:length(all_possible_player_sets)
         player_set = all_possible_player_sets{i};
         equation = EquationStateValueFunction(player_set);
-        exprs(i) = equation.expr_with_pattern(pattern);
+        equations(i) = equation.expr_with_pattern(pattern);
       end
 
       disp("ベルマン方程式の構築結果")
-      exprs
+      equations
+    end
+
+    function solution = solve_equations_with_pattern(pattern)
+      % 指定したPattern(=最適マッチングの組み合わせ)に基づいて、全てのプレイヤ集合でベルマン方程式を生成し、解く
+      %
+      % Parameters:
+      %   pattern (Pattern): プレイヤ集合のマッチングの組み合わせ
+      %   solution (struct): シンボリックな解を格納する構造体
+      %     - 各フィールドは V に含まれる期待効用変数の名前(string)
+      %     - 各フィールドの値は シンボリック表記の解(sym)
+
+      equations = EquationStateValueFunction.build_equations_with_pattern(pattern);
+      V = VariablesHelper.init_state_values();
+      [w, c, r, a, ~, ~, ~, ~, ~, ~] = ParamsHelper.get_symbolic_params();
+      all_vars = symvar(V);
+      solution = solve(equations, all_vars);
+      for i = 1:length(all_vars)
+        varname = char(all_vars(i));
+        solution.(varname) = Utils.organize_expr(solution.(varname), [w, c, r(1), r(2), r(3), a(1), a(2), a(3)]);
+      end
+
+      disp('解')
+      solution
+      assignin('base', 'solution', solution);
+      assignin('base', 'all_vars', all_vars);
     end
   end
 end
