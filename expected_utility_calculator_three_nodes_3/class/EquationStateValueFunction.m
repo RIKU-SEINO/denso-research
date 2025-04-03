@@ -51,9 +51,9 @@ classdef EquationStateValueFunction
       for i = 1:length(player_sets_after_transition)
         player_set_after_transition = player_sets_after_transition{i};
         fprintf('遷移後のプレイヤ集合-%d: %s\n\n', i, player_set_after_transition.label());
-        % 3. 遷移後のプレイヤ集合について、最適マッチングにおける期待効用をpiecewiseで区分的に表現
+        % 3. 遷移後のプレイヤ集合について、期待効用をpiecewiseで区分的に表現
 
-        expected_utility = player_set_after_transition.get_optimal_expected_utility();
+        expected_utility = player_set_after_transition.get_expected_utility_with_piecewise();
 
         right = right + q(i) * expected_utility;
         fprintf('遷移後のプレイヤ集合-%dから上記のマッチング後における期待効用: %s\n\n', i, char(expected_utility));
@@ -131,7 +131,7 @@ classdef EquationStateValueFunction
       diff_exprs = EquationStateValueFunction.build_diff_exprs();
       V = VariablesHelper.init_state_values();
       [w, c, r, a, p, p_, g, ~, ~, ~] = ParamsHelper.get_symbolic_params();
-      [w_v, c_v, r_v, a_v, p_v, p__v, g_v, V_init] = ParamsHelper.get_valued_params();
+      [w_v, c_v, r_v, a_v, p_v, p__v, g_v, ~, ~, ~, V_init] = ParamsHelper.get_valued_params();
       all_symbolic_params = [
         w, c, reshape(r.', 1, []), reshape(a.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
       ];
@@ -144,7 +144,12 @@ classdef EquationStateValueFunction
       % 2. ベルマン方程式の右辺と左辺の差のシンボリック式を数値的に解く
       matlabFunction(diff_exprs_evaluated, 'Vars', {V.'}, 'File', 'func/diff_exprs_func');
       options = optimoptions('fsolve', 'Display', 'iter');
-      solution = fsolve(@diff_exprs_func, V_init, options);
+      solution_array = fsolve(@diff_exprs_func, V_init, options);
+      solution = struct();
+      for i = 1:length(V)
+        varname = char(V(i));
+        solution.(varname) = solution_array(i);
+      end
 
       disp('解')
       solution

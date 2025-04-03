@@ -257,6 +257,23 @@ classdef PlayerSet
       end
     end
 
+    function player_sets = passenger_emerged(obj)
+      % プレイヤ集合から乗客が出現した後のプレイヤ集合の候補を取得する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   player_sets (cell<PlayerSet>): 乗客が出現した後のプレイヤーの集合
+
+      all_possible_passenger_sets = PlayerSet.get_all_possible_passenger_sets();
+      player_sets = cell(length(all_possible_passenger_sets), 1);
+      for i = 1:length(all_possible_passenger_sets)
+        player_set_temp = obj.add_all(all_possible_passenger_sets{i}.players);
+        player_sets{i} = player_set_temp;
+      end
+    end
+
     function player_sets = get_all_possible_player_sets_after_transition(obj)
       % 指定したプレイヤ集合から次の二つが行われた後のプレイヤ集合の候補を取得する
       %   == assumption ==
@@ -273,12 +290,7 @@ classdef PlayerSet
       player_set = obj.one_step_elapsed();
 
       % 2. 乗客が出現する
-      all_possible_passenger_sets = PlayerSet.get_all_possible_passenger_sets();
-      player_sets = cell(length(all_possible_passenger_sets), 1);
-      for i = 1:length(all_possible_passenger_sets)
-        player_set_temp = player_set.add_all(all_possible_passenger_sets{i}.players);
-        player_sets{i} = player_set_temp;
-      end
+      player_sets = player_set.passenger_emerged();
     end
 
     function player_matchings = get_all_possible_player_matchings(obj)
@@ -326,14 +338,14 @@ classdef PlayerSet
       end
     end
 
-    function expected_utility = get_optimal_expected_utility(obj)
-      % プレイヤ集合における最適な期待効用を取得する
+    function expected_utility = get_expected_utility_with_piecewise(obj)
+      % プレイヤ集合における期待効用をpiecewise関数で表現する
       %
       % Parameters:
       %   obj (PlayerSet): 対象の PlayerSet オブジェクト
       %
       % Returns:
-      %   expected_utility (sym): プレイヤ集合における最適な期待効用
+      %   expected_utility (sym): プレイヤ集合における期待効用
 
       player_matchings = obj.get_all_possible_player_matchings();
       expected_utilities = cellfun(@(x) x.get_expected_utility_sum(), player_matchings, 'UniformOutput', false);
@@ -352,6 +364,40 @@ classdef PlayerSet
       end
 
       expected_utility = piecewise(piecewise_arg{:});
+    end
+
+    function expected_utility = get_expected_utility_from_solution(obj, solution)
+      % プレイヤ集合における期待効用を、実際の計算結果solutionから数値として取得する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %   solution (struct): 計算結果の構造体
+      %     - 各フィールドは V に含まれる期待効用変数の名前(string)
+      %     - 各フィールドの値はその期待効用変数の値(double)
+      %
+      % Returns:
+      %   expected_utility (double): プレイヤ集合における期待効用
+
+      state_value = VariablesHelper.get_state_value(obj);
+      expected_utility = solution.(char(state_value));
+    end
+
+    function player_matching = get_optimal_player_matching(obj, solution)
+      % 各プレイヤ集合に期待効用の計算結果solutionを元に、現在のプレイヤ集合objにおける最適なマッチングを取得する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %   solution (struct): 計算結果の構造体
+      %     - 各フィールドは V に含まれる期待効用変数の名前(string)
+      %     - 各フィールドの値はその期待効用変数の値(double)
+      %
+      % Returns:
+      %   player_matching (PlayerMatching): プレイヤ集合における最適なマッチング
+
+      player_matchings = obj.get_all_possible_player_matchings();
+      expected_utilities = cellfun(@(x) x.get_expected_utility_sum_from_solution(solution), player_matchings);
+      [~, max_index] = max(expected_utilities);
+      player_matching = player_matchings{max_index};
     end
   end
 

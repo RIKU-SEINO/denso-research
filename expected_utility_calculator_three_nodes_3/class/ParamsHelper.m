@@ -44,10 +44,10 @@ classdef ParamsHelper
       cached_params = {w, c, r, a, p, p_, g, u_v, u_ps, q};
     end
 
-    function [w, c, r, a, p, p_, g, V_init] = get_valued_params()
+    function [w, c, r, a, p, p_, g, u_v, u_ps, q, V_init] = get_valued_params()
       persistent cached_params_valued;
       if ~isempty(cached_params_valued)
-        [w, c, r, a, p, p_, g, V_init] = cached_params_valued{:};
+        [w, c, r, a, p, p_, g, u_v, u_ps, q, V_init] = cached_params_valued{:};
         return;
       end
 
@@ -67,9 +67,19 @@ classdef ParamsHelper
       
       g = 0.9;
 
+      u_v = double(ParamsHelper.utility_taxi(w));
+
+      u_ps = double(ParamsHelper.utility_passenger(r, a));
+
+      % 一般の場合はtrans_prob_vecを使う
+      % q = ParamsHelper.trans_prob_vec(p, p_);
+      % == Assumption == 
+      % ps_{2,1}またはps_{3,1}のみ出現することを前提としているので、trans_prob_vec_only_ps21_ps31を使う
+      q = double(ParamsHelper.trans_prob_vec_only_ps21_ps31(p, p_));
+
       V_init = 1000*ones(1, length(VariablesHelper.init_state_values()));
 
-      cached_params_valued = {w, c, r, a, p, p_, g, V_init};
+      cached_params_valued = {w, c, r, a, p, p_, g, u_v, u_ps, q, V_init};
     end
 
     function u_v = utility_taxi(w)

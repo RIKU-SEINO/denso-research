@@ -122,50 +122,79 @@ classdef PlayerMatching
       end
     end
 
-    function utilities = get_utilities(obj)
+    function utilities = get_utilities(obj, mode)
       % マッチングを組んだ時の即時効用を取得する
       %
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   mode (char): 'symbolic' または 'numeric' を指定する。
       %
       % Returns:
-      %   utilities (cell<Utility>): マッチングのユーティリティを格納するセル配列
+      %   utilities (cell<sym|double>): マッチングのユーティリティを格納するセル配列
 
       all_possible_players = Player.get_all_possible_players();
       utilities = sym(zeros(length(all_possible_players), 1));
 
       for i = 1:length(obj.player_pairs)
         player_pair = obj.player_pairs{i};
-        utilities = utilities + player_pair.get_utilities();
+        utilities = utilities + player_pair.get_utilities(mode);
       end
     end
 
-    function utility = get_utility_sum(obj)
+    function utility = get_utility_sum(obj, mode)
       % マッチングを組んだ時の即時効用の合計を取得する(=R)
       %
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   mode (char): 'symbolic' または 'numeric' を指定する。
       %
       % Returns:
-      %   utility (Utility): マッチングのユーティリティの合計
+      %   utility (sym|double): マッチングのユーティリティの合計
 
-      utilities = obj.get_utilities();
+      utilities = obj.get_utilities(mode);
       utility = sum(utilities);
     end
 
-    function utility = get_expected_utility_sum(obj)
-      % マッチングを組んだ時の期待効用の合計を取得する（=R + γ * V）
+    function expected_utility = get_expected_utility_sum(obj)
+      % マッチングを組んだ時の期待効用の合計をシンボリック式で取得する（=R + γ * V）
       %
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
       %
       % Returns:
-      %   utility (Utility): マッチングの期待効用の合計
+      %   expected_utility (Utility): マッチングの期待効用の合計
       [~, ~, ~, ~, ~, ~, g, ~, ~, ~] = ParamsHelper.get_symbolic_params();
 
+      player_set = obj.get_player_set_after_matching();
+      % 即時報酬（=R）
+      utility = obj.get_utility_sum('symbolic');
+      % マッチが組まれた後のプレイヤ集合における期待効用（=V）
+      expected_utility_after = VariablesHelper.get_state_value(player_set);
+      % 期待効用の合計（=R + γ * V）
+      expected_utility = utility + g * expected_utility_after;
+    end
+
+    function expected_utility = get_expected_utility_sum_from_solution(obj, solution)
+      % マッチングを組んだ時の期待効用の合計を、実際の計算結果solutionから数値として取得する
+      %
+      % Parameters:
+      %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   solution (Solution): 計算結果の構造体
+      %    - 各フィールドは、V に含まれる期待効用変数の名前(string)
+      %    - 各フィールドの値は、対応する期待効用の数値(double)
+      %
+      % Returns:
+      %   expected_utility (double): マッチングの期待効用の合計
+
+      [~, ~, ~, ~, ~, ~, g, ~, ~, ~, ~] = ParamsHelper.get_valued_params();
 
       player_set = obj.get_player_set_after_matching();
-      utility = obj.get_utility_sum() + g * VariablesHelper.get_state_value(player_set); % R + γ * V
+      % 即時報酬（=R）
+      utility = obj.get_utility_sum('numeric');
+      % マッチが組まれた後のプレイヤ集合における期待効用（=V）
+      expected_utility_after = player_set.get_expected_utility_from_solution(solution);
+      % 期待効用の合計（=R + γ * V）
+      expected_utility = utility + g * expected_utility_after;
     end
 
     function player_matchings = get_all_possible_player_matchings(obj)

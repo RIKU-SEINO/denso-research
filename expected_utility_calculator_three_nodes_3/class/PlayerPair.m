@@ -196,16 +196,26 @@ classdef PlayerPair
       end
     end
 
-    function utilities = get_utilities(obj)
+    function utilities = get_utilities(obj, mode)
       % プレイヤのペアが組まれた時の即時効用を取得する
       %
+      % Parameters:
+      %   obj (PlayerPair): プレイヤのペアの PlayerPair オブジェクト
+      %   mode (char): 'symbolic' または 'numeric' を指定する。 'symbolic' の場合はシンボリックなユーティリティを返し、 'numeric' の場合は数値的なユーティリティを返す。
       % Returns:
       %   utilities (cell): プレイヤのペアのユーティリティを格納するセル配列
 
-      [~, c, ~, a, ~, ~, ~, u_v, u_ps, ~] = ParamsHelper.get_symbolic_params();
-
       all_possible_players = Player.get_all_possible_players();
-      utilities = sym(zeros(length(all_possible_players), 1));
+
+      if strcmp(mode, 'symbolic')
+        [~, c, ~, a, ~, ~, ~, u_v, u_ps, ~] = ParamsHelper.get_symbolic_params();
+        utilities = sym(zeros(length(all_possible_players), 1));
+      elseif strcmp(mode, 'numeric')
+        [~, c, ~, a, ~, ~, ~, u_v, u_ps, ~, ~] = ParamsHelper.get_valued_params();
+        utilities = zeros(length(all_possible_players), 1);
+      else
+        error('modeは''symbolic''または''numeric''でなければなりません');
+      end
 
       taxi = obj.get_taxi();
       passenger = obj.get_passenger();
