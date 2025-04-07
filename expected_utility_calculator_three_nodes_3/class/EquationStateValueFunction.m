@@ -63,7 +63,7 @@ classdef EquationStateValueFunction
     end
 
     function expr = expr_with_pattern(obj, pattern)
-      % 指定したPattern(=最適マッチングの組み合わせ)に基づいて、obj.player_setで指定されたプレイヤ集合におけるベルマン方程式を構築する
+      % 指定したPatternに基づいて、obj.player_setで指定されたプレイヤ集合におけるベルマン方程式を構築する
       %
       % Parameters:
       %   obj (EquationStateValueFunction): EquationStateValueFunction インスタンス
@@ -98,6 +98,19 @@ classdef EquationStateValueFunction
       end
 
       expr = right == left;
+    end
+
+    function diff_expr = diff_expr_with_pattern(obj, pattern)
+      % 指定したPatternに基づいて、obj.player_setで指定されたプレイヤ集合におけるベルマン方程式の右辺と左辺の差を取得する
+      %
+      % Parameters:
+      %   obj (EquationStateValueFunction): EquationStateValueFunction インスタンス
+      %   pattern (Pattern): プレイヤ集合のマッチングの組み合わせ
+      %
+      % Returns:
+      %   expr (sym): obj.player_setで指定されたプレイヤ集合に関するベルマン方程式の右辺と左辺の差のシンボリック式
+      expr = obj.expr_with_pattern(pattern);
+      diff_expr = lhs(expr) - rhs(expr);
     end
   end
 
@@ -156,7 +169,7 @@ classdef EquationStateValueFunction
     end
 
     function equations = build_equations_with_pattern(pattern)
-      % 指定したPattern(=最適マッチングの組み合わせ)に基づいて、全てのプレイヤ集合でベルマン方程式を生成する
+      % 指定したPatternに基づいて、全てのプレイヤ集合でベルマン方程式を生成する
       % 
       % Parameters:
       %   pattern (Pattern): プレイヤ集合のマッチングの組み合わせ
@@ -175,8 +188,8 @@ classdef EquationStateValueFunction
       equations
     end
 
-    function solution = solve_equations_with_pattern(pattern)
-      % 指定したPattern(=最適マッチングの組み合わせ)に基づいて、全てのプレイヤ集合でベルマン方程式を生成し、解く
+    function solution = solve_equations_analytic_with_pattern(pattern)
+      % 指定したPatternに基づいて、全てのプレイヤ集合でベルマン方程式を生成し、解析的に解く
       %
       % Parameters:
       %   pattern (Pattern): プレイヤ集合のマッチングの組み合わせ
@@ -192,6 +205,61 @@ classdef EquationStateValueFunction
       for i = 1:length(all_vars)
         varname = char(all_vars(i));
         solution.(varname) = Utils.organize_expr(solution.(varname), [w, c, r(1), r(2), r(3), a(1), a(2), a(3)]);
+      end
+
+      disp('解')
+      solution
+    end
+
+    function diff_exprs = build_diff_exprs_with_pattern(pattern)
+      % 指定したPatternに基づいて、全てのプレイヤ集合でベルマン方程式の右辺と左辺の差を計算する
+      %
+      % Parameters:
+      %   pattern (Pattern): プレイヤ集合のマッチングの組み合わせ
+      % Returns:
+      %   diff_exprs (sym): obj.player_setで指定されたプレイヤ集合に関するベルマン方程式の右辺と左辺の差のシンボリック式の配列 
+      all_possible_player_sets = PlayerSet.get_all_possible_player_sets(); 
+      diff_exprs = sym(zeros(length(all_possible_player_sets), 1));
+      for i = 1:length(all_possible_player_sets)
+        player_set = all_possible_player_sets{i};
+        equation = EquationStateValueFunction(player_set);
+        diff_exprs(i) = equation.diff_expr_with_pattern(pattern);
+      end
+
+      disp("ベルマン方程式の構築結果")
+      diff_exprs    
+    end
+
+    function solution = solve_equations_numeric_with_pattern(pattern)
+      % 指定したPatternに基づいて、全てのプレイヤ集合でベルマン方程式の右辺と左辺の差を計算し、数値的に解く
+      %
+      % Parameters:
+      %   pattern (Pattern): プレイヤ集合のマッチングの組み合わせ
+      %   solution (struct): シンボリックな解を格納する構造体
+      %     - 各フィールドは V に含まれる期待効用変数の名前(string)
+      %     - 各フィールドの値は シンボリック表記の解(sym)
+
+      diff_exprs = EquationStateValueFunction.build_diff_exprs_with_pattern(pattern);
+      V = VariablesHelper.init_state_values();
+      [w, c, r, a, p, p_, g, ~, ~, ~] = ParamsHelper.get_symbolic_params();
+      [w_v, c_v, r_v, a_v, p_v, p__v, g_v, ~, ~, ~, V_init] = ParamsHelper.get_valued_params();
+      all_symbolic_params = [
+        w, c, reshape(r.', 1, []), reshape(a.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
+      ];
+      all_valued_params = [
+        w_v, c_v, reshape(r_v.', 1, []), reshape(a_v.', 1, []), reshape(p_v.', 1, []), reshape(p__v.', 1, []), g_v
+      ];
+
+      % 1. ベルマン方程式の右辺と左辺の差のシンボリック式に含まれるパラメータを数値に置き換える
+      diff_exprs_evaluated = subs(diff_exprs, all_symbolic_params, all_valued_params);
+      % 2. ベルマン方程式の右辺と左辺の差のシンボリック式を数値的に解く
+      matlabFunction(diff_exprs_evaluated, 'Vars', {V.'}, 'File', 'func/diff_exprs_func_with_pattern');
+      options = optimoptions('fsolve', 'Display', 'iter');
+      solution_array = fsolve(@diff_exprs_func_with_pattern, V_init, options);
+      solution = struct();
+      for i = 1:length(V)
+        varname = char(V(i));
+        solution.(varname) = solution_array(i);
       end
 
       disp('解')

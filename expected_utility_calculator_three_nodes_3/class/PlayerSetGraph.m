@@ -5,19 +5,21 @@ classdef PlayerSetGraph
   % 
   properties
     solution % 数値解
+    pattern % Patternクラスのインスタンス
     player_set_labels_origin % 遷移前のプレイヤーセットラベル
     player_set_labels_after_transition % 遷移後のプレイヤーセットラベル
     player_set_labels_before_matching % マッチング前のプレイヤーセットラベル
     player_set_labels_after_matching % マッチング後のプレイヤーセットラベル
-    player_set_labels_before_optimal_matching % 最適マッチング前のプレイヤーセットラベル
-    player_set_labels_after_optimal_matching % 最適マッチング後のプレイヤーセットラベル
+    player_set_labels_before_adopted_matching % obj.patternで採用されたマッチング前のプレイヤーセットラベル
+    player_set_labels_after_adopted_matching % obj.patternで採用されたマッチング後のプレイヤーセットラベル
     graph % 作成されたグラフオブジェクト
   end
   
   % constructor
   methods
-    function obj = PlayerSetGraph(solution)
+    function obj = PlayerSetGraph(solution, pattern)
       obj.solution = solution;
+      obj.pattern = pattern;
       obj = obj.generate_labels_and_graph();
     end
   end
@@ -35,8 +37,8 @@ classdef PlayerSetGraph
       obj.player_set_labels_after_transition = {};
       obj.player_set_labels_before_matching = {};
       obj.player_set_labels_after_matching = {};
-      obj.player_set_labels_before_optimal_matching = {};
-      obj.player_set_labels_after_optimal_matching = {};
+      obj.player_set_labels_before_adopted_matching = {};
+      obj.player_set_labels_after_adopted_matching = {};
 
       all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
       
@@ -66,10 +68,9 @@ classdef PlayerSetGraph
           obj.player_set_labels_before_matching{end+1} = label_before_matching;
           obj.player_set_labels_after_matching{end+1} = label_after_matching;
 
-          if isequal(player_matching, player_set.get_optimal_player_matching(obj.solution))
-            % 最適マッチングの場合
-            obj.player_set_labels_before_optimal_matching{end+1} = label_before_matching;
-            obj.player_set_labels_after_optimal_matching{end+1} = label_after_matching;
+          if isequal(player_matching, obj.pattern.get_player_matching_by_player_set(player_set))
+            obj.player_set_labels_before_adopted_matching{end+1} = label_before_matching;
+            obj.player_set_labels_after_adopted_matching{end+1} = label_after_matching;
           end
         end
       end
@@ -96,9 +97,9 @@ classdef PlayerSetGraph
       % Returns:
       %   h (handle): グラフの描画ハンドル
       
+      figure
       h = plot(obj.graph, 'EdgeColor', 'b', 'LineWidth', 0.5);
       layout(h, 'layered');
-      title('Player Set Transitions and Matchings');
       hold on;
       
       % マッチングエッジ（赤破線）の追加
@@ -108,8 +109,8 @@ classdef PlayerSetGraph
       hold on;
 
       obj.add_matching_edges(h, ...
-        obj.player_set_labels_before_optimal_matching, ...
-        obj.player_set_labels_after_optimal_matching, 'bold');
+        obj.player_set_labels_before_adopted_matching, ...
+        obj.player_set_labels_after_adopted_matching, 'bold');
       hold off;
     end
     

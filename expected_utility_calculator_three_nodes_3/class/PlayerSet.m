@@ -382,27 +382,42 @@ classdef PlayerSet
       expected_utility = solution.(char(state_value));
     end
 
-    function player_matching = get_optimal_player_matching(obj, solution)
-      % 各プレイヤ集合に期待効用の計算結果solutionを元に、現在のプレイヤ集合objにおける最適なマッチングを取得する
-      %
-      % Parameters:
-      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
-      %   solution (struct): 計算結果の構造体
-      %     - 各フィールドは V に含まれる期待効用変数の名前(string)
-      %     - 各フィールドの値はその期待効用変数の値(double)
-      %
-      % Returns:
-      %   player_matching (PlayerMatching): プレイヤ集合における最適なマッチング
+    % function player_matching = get_optimal_player_matching(obj, solution)
+    %   % 各プレイヤ集合の期待効用の計算結果solutionを元に、現在のプレイヤ集合objにおける最適なマッチングを取得する
+    %   %
+    %   % Parameters:
+    %   %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+    %   %   solution (struct): 計算結果の構造体
+    %   %     - 各フィールドは V に含まれる期待効用変数の名前(string)
+    %   %     - 各フィールドの値はその期待効用変数の値(double)
+    %   %
+    %   % Returns:
+    %   %   player_matching (PlayerMatching): プレイヤ集合における最適なマッチング
 
-      player_matchings = obj.get_all_possible_player_matchings();
-      expected_utilities = cellfun(@(x) x.get_expected_utility_sum_from_solution(solution), player_matchings);
-      [~, max_index] = max(expected_utilities);
-      player_matching = player_matchings{max_index};
-    end
+    %   player_matchings = obj.get_all_possible_player_matchings();
+    %   expected_utilities = cellfun(@(x) x.get_expected_utility_sum_from_solution(solution), player_matchings);
+    %   [~, max_index] = max(expected_utilities);
+    %   player_matching = player_matchings{max_index};
+    % end
   end
 
   % static methods
   methods (Static)
+    function labels = labels(player_sets)
+      % プレイヤ集合のラベル一覧を取得する
+      %
+      % Parameters:
+      %   player_sets (cell<PlayerSet>): プレイヤ集合の配列
+      %
+      % Returns:
+      %   labels (cell<char>): プレイヤ集合のラベルの配列
+
+      labels = cell(length(player_sets), 1);
+      for i = 1:length(player_sets)
+        labels{i} = player_sets{i}.label();
+      end
+    end
+    
     function all_taxi_sets = get_all_taxis_sets()
       % 全てのタクシーの集合を取得する
       %
