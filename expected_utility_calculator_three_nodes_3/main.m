@@ -5,19 +5,19 @@ addpath('./func')
 % 1. 最適状態価値関数方程式(=ベルマン方程式)を数値的に解く
 disp('最適状態価値関数方程式の解を数値的に計算します...');
 optimal_solution = EquationStateValueFunction.solve_equations();
-optimal_pattern = Pattern.get_pattern_from_optimal_solution(optimal_solution);
+optimal_policy = Policy.get_policy_from_optimal_solution(optimal_solution);
 
-% 2. すべてのpattern(=方策）ごとに、状態価値関数方程式を解く
-disp('すべてのpatternごとに、状態価値関数方程式を解きます...');
-patterns = Pattern.get_all_possible_patterns();
-solutions = cell(length(patterns), 1);
-is_optimal = false(length(patterns), 1);
-for i = 1:length(patterns)
-  pattern = patterns{i};
-  fprintf('Pattern %d: %s\n', i, pattern.label);
-  solution = EquationStateValueFunction.solve_equations_numeric_with_pattern(pattern);
+% 2. すべてのpolicy(=方策）ごとに、状態価値関数方程式を解く
+disp('すべてのpolicyごとに、状態価値関数方程式を解きます...');
+policies = Policy.get_all_possible_policies();
+solutions = cell(length(policies), 1);
+is_optimal = false(length(policies), 1);
+for i = 1:length(policies)
+  policy = policies{i};
+  fprintf('Policy %d: %s\n', i, policy.label);
+  solution = EquationStateValueFunction.solve_equations_numeric_with_policy(policy);
   solutions{i} = solution;
-  if isequal(pattern, optimal_pattern)
+  if isequal(policy, optimal_policy)
     is_optimal(i) = true;
   end
 end

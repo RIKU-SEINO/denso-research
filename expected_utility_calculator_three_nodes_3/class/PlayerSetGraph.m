@@ -5,21 +5,21 @@ classdef PlayerSetGraph
   % 
   properties
     solution % 数値解
-    pattern % Patternクラスのインスタンス
+    policy % Policyクラスのインスタンス
     player_set_labels_origin % 遷移前のプレイヤーセットラベル
     player_set_labels_after_transition % 遷移後のプレイヤーセットラベル
     player_set_labels_before_matching % マッチング前のプレイヤーセットラベル
     player_set_labels_after_matching % マッチング後のプレイヤーセットラベル
-    player_set_labels_before_adopted_matching % obj.patternで採用されたマッチング前のプレイヤーセットラベル
-    player_set_labels_after_adopted_matching % obj.patternで採用されたマッチング後のプレイヤーセットラベル
+    player_set_labels_before_adopted_matching % obj.policyで採用されたマッチング前のプレイヤーセットラベル
+    player_set_labels_after_adopted_matching % obj.policyで採用されたマッチング後のプレイヤーセットラベル
     graph % 作成されたグラフオブジェクト
   end
   
   % constructor
   methods
-    function obj = PlayerSetGraph(solution, pattern)
+    function obj = PlayerSetGraph(solution, policy)
       obj.solution = solution;
-      obj.pattern = pattern;
+      obj.policy = policy;
       obj = obj.generate_labels_and_graph();
     end
   end
@@ -68,7 +68,7 @@ classdef PlayerSetGraph
           obj.player_set_labels_before_matching{end+1} = label_before_matching;
           obj.player_set_labels_after_matching{end+1} = label_after_matching;
 
-          if isequal(player_matching, obj.pattern.get_player_matching_by_player_set(player_set))
+          if isequal(player_matching, obj.policy.get_player_matching_by_player_set(player_set))
             obj.player_set_labels_before_adopted_matching{end+1} = label_before_matching;
             obj.player_set_labels_after_adopted_matching{end+1} = label_after_matching;
           end

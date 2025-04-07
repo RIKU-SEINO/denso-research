@@ -1,8 +1,7 @@
-classdef Pattern
-  % Pattern クラス
+classdef Policy
+  % Policy クラス
   %
-  % 期待効用方程式を解く際の条件パターン（=マッチングの組み合わせ）を表すクラス。
-  % MDPの文脈では、方策πに相当する。
+  % 期待効用方程式を解く際の方策（=マッチングの組み合わせ）を表すクラス。
   %
   %   具体例:
   %       例えば、プレイヤ集合 P = {P1, P2, P3, P4} があり、各プレイヤ集合ごとに以下のマッチング候補がある場合:
@@ -10,7 +9,7 @@ classdef Pattern
   %           P2 のマッチング候補: {M_{P2,1}, M_{P2,2}, M_{P2,3}}
   %           P3 のマッチング候補: {M_{P3,1}, M_{P3,2}}
   %           P4 のマッチング候補: {M_{P4,1}}
-  %      この時の パターン として、次の12通りが考えられる。
+  %      この時の 方策 として、次の12通りが考えられる。
   %           {M_{P1,1}, M_{P2,1}, M_{P3,1}, M_{P4,1}}
   %           {M_{P1,2}, M_{P2,1}, M_{P3,1}, M_{P4,1}}
   %           ... 
@@ -25,14 +24,14 @@ classdef Pattern
 
   % constructor
   methods
-    function obj = Pattern(player_matchings)
-      % Pattern クラスのコンストラクタ
+    function obj = Policy(player_matchings)
+      % Policy クラスのコンストラクタ
       %
       % Parameters:
       %   player_matchings (cell<PlayerMatching>): プレイヤマッチングの配列
       %
       % Returns:
-      %   obj (Pattern): 生成された Pattern インスタンス
+      %   obj (Policy): 生成された Policy インスタンス
 
       obj.player_matchings = player_matchings;
 
@@ -43,13 +42,13 @@ classdef Pattern
   % override
   methods
     function obj = sort(obj)
-      % PatternのPlayerMatchingをソートする
+      % PolicyのPlayerMatchingをソートする
       %
       % Parameters:
-      %   obj (Pattern): Pattern インスタンス
+      %   obj (Policy): Policy インスタンス
       %
       % Returns:
-      %   obj (Pattern): ソートされた Pattern インスタンス
+      %   obj (Policy): ソートされた Policy インスタンス
 
       obj.player_matchings = PlayerMatching.sort_player_matchings(obj.player_matchings);
     end
@@ -58,20 +57,20 @@ classdef Pattern
   % other
   methods
     function id = id(obj)
-      % PatternのIDを取得する
+      % PolicyのIDを取得する
       %
       % Returns:
-      %   id (string): PatternのID
+      %   id (string): PolicyのID
 
       ids = PlayerMatching.ids(obj.player_matchings);
       id = char(strjoin(string(ids), '_&&_'));
     end
 
     function label = label(obj)
-      % Patternのラベルを取得する
+      % Policyのラベルを取得する
       %
       % Returns:
-      %   label (string): Patternのラベル
+      %   label (string): Policyのラベル
 
       labels = PlayerMatching.labels(obj.player_matchings);
       label = char(strjoin(string(labels), ', '));
@@ -99,10 +98,10 @@ classdef Pattern
     end
 
     function player_matching = get_player_matching_by_player_set(obj, player_set)
-      % Patternにおいて、指定されたplayer_setに対応するPlayerMatchingを取得する
+      % Policyにおいて、指定されたplayer_setに対応するPlayerMatchingを取得する
       %
       % Parameters:
-      %   obj (Pattern): Pattern インスタンス
+      %   obj (Policy): Policy インスタンス
       %   player_set (PlayerSet): プレイヤ集合
       %
       % Returns:
@@ -114,11 +113,11 @@ classdef Pattern
   end
 
   methods (Static)
-    function patterns = get_all_possible_patterns()
+    function policies = get_all_possible_policies()
       % すべてのプレイヤ集合のマッチング組み合わせを取得する。
       %
       % Returns:
-      %   patterns (cell<Pattern>): すべてのPatternのcell配列
+      %   policies (cell<Policy>): すべてのPolicyのcell配列
 
       %   具体例:
       %       例えば、プレイヤ集合 P = {P1, P2, P3, P4} があり、各プレイヤ集合ごとに以下のマッチング候補がある場合:
@@ -126,7 +125,7 @@ classdef Pattern
       %           P2 のマッチング候補: {M_{P2,1}, M_{P2,2}, M_{P2,3}}
       %           P3 のマッチング候補: {M_{P3,1}, M_{P3,2}}
       %           P4 のマッチング候補: {M_{P4,1}}
-      %       これらの組み合わせの総数 2 * 3 * 2 * 1 = 12 通りのPatternが生成される。
+      %       これらの組み合わせの総数 2 * 3 * 2 * 1 = 12 通りのPolicyが生成される。
 
       all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
       num_sets = length(all_possible_player_sets);
@@ -142,33 +141,33 @@ classdef Pattern
       [grid{1:num_sets}] = ndgrid(indices{:});
       combination_indices = cell2mat(cellfun(@(x) x(:), grid, 'UniformOutput', false));
 
-      patterns = cell(size(combination_indices, 1), 1);
+      policies = cell(size(combination_indices, 1), 1);
       for k = 1:size(combination_indices, 1)
         player_matchings = cell(num_sets, 1);
         for j = 1:num_sets
           player_matching = matching_options{j}{combination_indices(k, j)};
           player_matchings{j} = player_matching;
         end
-        patterns{k} = Pattern(player_matchings);
+        policies{k} = Policy(player_matchings);
       end
     end
 
-    function pattern = get_pattern_from_optimal_solution(solution)
-      % 各プレイヤ集合における最適期待効用solutionに基づいて、そのsolutionが満たすPatternを取得する
+    function policy = get_policy_from_optimal_solution(solution)
+      % 各プレイヤ集合における最適期待効用solutionに基づいて、そのsolutionが満たすPolicyを取得する
       %
       % Parameters:
       %   solution (struct): 期待効用方程式の解
       %
       % Returns:
-      %   pattern (Pattern): Pattern インスタンス
+      %   policy (Policy): Policy インスタンス
 
-      pattern = [];
-      all_possible_patterns = Pattern.get_all_possible_patterns();
-      for i = 1:length(all_possible_patterns)
-        optimality_condition_evaluated = all_possible_patterns{i}.optimality_condition_evaluated();
+      policy = [];
+      all_possible_policies = Policy.get_all_possible_policies();
+      for i = 1:length(all_possible_policies)
+        optimality_condition_evaluated = all_possible_policies{i}.optimality_condition_evaluated();
         optimality_condition_evaluated = subs(optimality_condition_evaluated, fieldnames(solution), struct2cell(solution));
         if isAlways(optimality_condition_evaluated)
-          pattern = all_possible_patterns{i};
+          policy = all_possible_policies{i};
           break;
         end
       end

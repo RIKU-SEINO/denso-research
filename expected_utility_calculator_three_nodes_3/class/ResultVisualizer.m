@@ -6,21 +6,21 @@ classdef ResultVisualizer
 
   % 状態価値関数関連の結果表示
   methods (Static)
-    function display_player_set_value_as_graphs(solutions, patterns, is_optimal)
+    function display_state_values_as_graphs(solutions, policies, is_optimal)
       % プレイヤ集合の状態価値関数をグラフとして表示する
       %
       % Parameters:
-      %   solutions (cell): 各パターンに対する状態価値関数の解
-      %   patterns (cell): 各パターンの情報
-      %   is_optimal (logical): 最適なパターンかどうかのフラグ
+      %   solutions (cell): 各方策に対する状態価値関数の解
+      %   policies (cell): 各方策の情報
+      %   is_optimal (logical): 最適な方策かどうかのフラグ
       %
       % Returns:
       %   None
 
       for i = 1:length(solutions)
-        fprintf('Pattern %d: %s の遷移グラフを作成中...\n', i, patterns{i}.label);
+        fprintf('Policy %d: %s の遷移グラフを作成中...\n', i, policies{i}.label);
         solution = solutions{i};
-        pattern = patterns{i};
+        policy = policies{i};
         if is_optimal(i)
           optimal_str = 'true';
         else
@@ -28,21 +28,21 @@ classdef ResultVisualizer
         end
         
         % グラフを生成
-        player_set_graph = PlayerSetGraph(solution, pattern);
+        player_set_graph = PlayerSetGraph(solution, policy);
         
         % グラフを表示
         player_set_graph.plot_graph();
-        title_str = sprintf('Pattern %d: Optimal: %s', i, optimal_str);
+        title_str = sprintf('Policy: %d, Optimal: %s', i, optimal_str);
         title(title_str);
       end
     end
 
-    function display_player_set_value_as_bar(solutions, is_optimal)
+    function display_state_values_as_bar(solutions, is_optimal)
       % プレイヤ集合の状態価値関数を棒グラフとして表示する
       %
       % Parameters:
-      %   solutions (cell): 各パターンに対する状態価値関数の解
-      %   is_optimal (logical): 最適なパターンかどうかのフラグ
+      %   solutions (cell): 各方策に対する状態価値関数の解
+      %   is_optimal (logical): 最適な方策かどうかのフラグ
       %
       % Returns:
       %   None
@@ -67,7 +67,7 @@ classdef ResultVisualizer
         bar(state_values);
         
         % タイトルとラベルを設定
-        title_str = sprintf('Pattern %d: Optimal: %s', i, optimal_str);
+        title_str = sprintf('State Values based on Policy: %d, Optimal: %s', i, optimal_str);
         title(title_str);
         xticks(1:length(all_possible_player_sets));
         xticklabels(PlayerSet.labels(all_possible_player_sets));
