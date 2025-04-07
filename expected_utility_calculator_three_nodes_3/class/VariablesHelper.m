@@ -38,5 +38,49 @@ classdef VariablesHelper
       V = VariablesHelper.init_state_values();
       state_value = V(player_set.index());
     end
+
+    function x = init_expected_utilities()
+      % 期待効用の初期化
+      %
+      % Parameters: None
+      %
+      % Returns:
+      %   x (symbolic): 期待効用のシンボリック変数の配列
+      
+      persistent x_cache;
+
+      if isempty(x_cache)
+        all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
+        all_possible_players = Player.get_all_possible_players();
+        x_cache = sym(zeros(length(all_possible_player_sets), length(all_possible_players)));
+        for i = 1:length(all_possible_player_sets)
+          player_set = all_possible_player_sets{i};
+          for j = 1:length(all_possible_players)
+            player = all_possible_players{j};
+            varname = strcat('x_', player_set.label(), '_', player.label());
+            varname = matlab.lang.makeValidName(varname);
+            syms(varname)
+            x_cache(i, j) = eval(varname);
+            assume(x_cache(i, j), 'real');
+            fprintf('Created expected utility variable: %s\n', varname);
+          end
+        end
+      end
+
+      x = x_cache;
+    end
+
+    function expected_utility = get_expected_utility(player_set, player)
+      % プレイヤセットとプレイヤに対する期待効用を取得する
+      %
+      % Parameters:
+      %   player_set (PlayerSet): プレイヤセット
+      %   player (Player): プレイヤ
+      %
+      % Returns:
+      %   expected_utility (symbolic): プレイヤセットとプレイヤに対する期待効用
+      x = VariablesHelper.init_expected_utilities();
+      expected_utility = x(player_set.index(), player.index());
+    end
   end
 end

@@ -122,6 +122,40 @@ classdef PlayerMatching
       end
     end
 
+    function player_after_matching = get_player_after_matching(obj, player)
+      % 指定したプレイヤがマッチング後にどのプレイヤになるかを取得する
+      %
+      % Parameters:
+      %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   player (Player): プレイヤ
+      %
+      % Returns:
+      %   player_after_matching (Player): マッチング後のプレイヤ
+
+      
+      for i = 1:length(obj.player_pairs)
+        player_pair = obj.player_pairs{i};
+        if player_pair.has(player)
+          % == assumption ==
+          % タクシーはマッチすると、置き換えられる
+          if player_pair.is_matched() && player.is_taxi()
+            [~, player_after_matching] = player_pair.get_replaced_player_after_matching();
+            break;
+          % == assumption ==
+          % 乗客はマッチすると、削除される
+          elseif player_pair.is_matched() && player.is_passenger()
+            player_after_matching = [];
+            break;
+          % == assumption ==
+          % マッチしないプレイヤはそのまま残る
+          else
+            player_after_matching = player;
+            break;
+          end
+        end
+      end
+    end
+
     function utilities = get_utilities(obj, mode)
       % マッチングを組んだ時の即時効用を取得する
       %
@@ -139,6 +173,21 @@ classdef PlayerMatching
         player_pair = obj.player_pairs{i};
         utilities = utilities + player_pair.get_utilities(mode);
       end
+    end
+
+    function utility = get_utility_of_player(obj, player, mode)
+      % 指定したプレイヤの即時効用を取得する
+      %
+      % Parameters:
+      %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   player (Player): プレイヤ
+      %   mode (char): 'symbolic' または 'numeric' を指定する。
+      %
+      % Returns:
+      %   utility (sym|double): プレイヤのユーティリティ
+
+      utilities = obj.get_utilities(mode);
+      utility = utilities(player.index());
     end
 
     function utility = get_utility_sum(obj, mode)
@@ -186,7 +235,7 @@ classdef PlayerMatching
       % Returns:
       %   expected_utility (double): マッチングの期待効用の合計
 
-      [~, ~, ~, ~, ~, ~, g, ~, ~, ~, ~] = ParamsHelper.get_valued_params();
+      [~, ~, ~, ~, ~, ~, g, ~, ~, ~, ~, ~] = ParamsHelper.get_valued_params();
 
       player_set = obj.get_player_set_after_matching();
       % 即時報酬（=R）

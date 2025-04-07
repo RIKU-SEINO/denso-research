@@ -79,6 +79,19 @@ classdef PlayerPair
       label = strcat('{', label, '}');
     end
 
+    function result = has(obj, player)
+      % プレイヤのペアに指定されたプレイヤが含まれているか判定する
+      %
+      % Parameters:
+      %   obj (PlayerPair): プレイヤのペアの PlayerPair オブジェクト
+      %   player (Player): 判定するプレイヤの Player オブジェクト
+      %
+      % Returns:
+      %   result (logical): 指定されたプレイヤが含まれている場合は true, そうでない場合は false
+
+      result = any(cellfun(@(x) isequal(x, player), obj.players));
+    end
+
     function result = has_taxi(obj)
       % プレイヤのペアにタクシーが含まれているか判定する
       %
@@ -211,7 +224,7 @@ classdef PlayerPair
         [~, c, ~, a, ~, ~, ~, u_v, u_ps, ~] = ParamsHelper.get_symbolic_params();
         utilities = sym(zeros(length(all_possible_players), 1));
       elseif strcmp(mode, 'numeric')
-        [~, c, ~, a, ~, ~, ~, u_v, u_ps, ~, ~] = ParamsHelper.get_valued_params();
+        [~, c, ~, a, ~, ~, ~, u_v, u_ps, ~, ~, ~] = ParamsHelper.get_valued_params();
         utilities = zeros(length(all_possible_players), 1);
       else
         error('modeは''symbolic''または''numeric''でなければなりません');

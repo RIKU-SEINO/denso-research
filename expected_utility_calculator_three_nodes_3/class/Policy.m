@@ -86,7 +86,7 @@ classdef Policy
 
     function expr = optimality_condition_evaluated(obj)
       [w, c, r, a, p, p_, g, ~, ~, ~] = ParamsHelper.get_symbolic_params();
-      [w_v, c_v, r_v, a_v, p_v, p__v, g_v, ~, ~, ~, ~] = ParamsHelper.get_valued_params();
+      [w_v, c_v, r_v, a_v, p_v, p__v, g_v, ~, ~, ~, ~, ~] = ParamsHelper.get_valued_params();
       all_symbolic_params = [
         w, c, reshape(r.', 1, []), reshape(a.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
       ];

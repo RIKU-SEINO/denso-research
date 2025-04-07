@@ -83,16 +83,15 @@ classdef EquationStateValueFunction
       player_sets_after_transition = obj.player_set.get_all_possible_player_sets_after_transition();
 
       right = sym(0);
-      % 2. 各プレイヤ集合に対して、最適なマッチングの組み合わせを取得
+      % 2. 各プレイヤ集合に対して、次の処理を行う
       for i = 1:length(player_sets_after_transition)
         player_set_after_transition = player_sets_after_transition{i};
         fprintf('遷移後のプレイヤ集合-%d: %s\n\n', i, player_set_after_transition.label());
-        % 3. 遷移後のプレイヤ集合について、policyに基づいて最適マッチングを取得
-        
-        optimal_player_matching = policy.get_player_matching_by_player_set(player_set_after_transition);
-        fprintf('遷移後のプレイヤ集合-%dにおける最適マッチング: %s\n', i, optimal_player_matching.label());
-        % 4. 遷移後のプレイヤ集合における最適マッチングの期待効用を計算し、q(i) * その期待効用を加算
-        expected_utility = optimal_player_matching.get_expected_utility_sum();
+        % 3. 遷移後のプレイヤ集合について、policyに基づいて採用されたマッチングを取得
+        adopted_player_matching = policy.get_player_matching_by_player_set(player_set_after_transition);
+        fprintf('遷移後のプレイヤ集合-%dにおける採用されたマッチング: %s\n', i, adopted_player_matching.label());
+        % 4. 遷移後のプレイヤ集合において採用されたマッチングの期待効用を計算し、q(i) * その期待効用を加算
+        expected_utility = adopted_player_matching.get_expected_utility_sum();
         right = right + q(i) * expected_utility;
         fprintf('遷移後のプレイヤ集合-%dから上記のマッチング後における期待効用: %s\n\n', i, char(expected_utility));
       end
@@ -144,7 +143,7 @@ classdef EquationStateValueFunction
       diff_exprs = EquationStateValueFunction.build_diff_exprs();
       V = VariablesHelper.init_state_values();
       [w, c, r, a, p, p_, g, ~, ~, ~] = ParamsHelper.get_symbolic_params();
-      [w_v, c_v, r_v, a_v, p_v, p__v, g_v, ~, ~, ~, V_init] = ParamsHelper.get_valued_params();
+      [w_v, c_v, r_v, a_v, p_v, p__v, g_v, ~, ~, ~, V_init, ~] = ParamsHelper.get_valued_params();
       all_symbolic_params = [
         w, c, reshape(r.', 1, []), reshape(a.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
       ];
@@ -155,9 +154,9 @@ classdef EquationStateValueFunction
       % 1. ベルマン方程式の右辺と左辺の差のシンボリック式に含まれるパラメータを数値に置き換える
       diff_exprs_evaluated = subs(diff_exprs, all_symbolic_params, all_valued_params);
       % 2. ベルマン方程式の右辺と左辺の差のシンボリック式を数値的に解く
-      matlabFunction(diff_exprs_evaluated, 'Vars', {V.'}, 'File', 'func/diff_exprs_func');
+      matlabFunction(diff_exprs_evaluated, 'Vars', {V.'}, 'File', 'func/diff_exprs_func_state_value');
       options = optimoptions('fsolve', 'Display', 'iter');
-      solution_array = fsolve(@diff_exprs_func, V_init, options);
+      solution_array = fsolve(@diff_exprs_func_state_value, V_init, options);
       solution = struct();
       for i = 1:length(V)
         varname = char(V(i));
@@ -231,18 +230,18 @@ classdef EquationStateValueFunction
     end
 
     function solution = solve_equations_numeric_with_policy(policy)
-      % Policy
+      % Policyに基づいて、数値的に方程式を解く
       %
       % Parameters:
       %   policy (Policy): プレイヤ集合のマッチングの組み合わせ
       %   solution (struct): シンボリックな解を格納する構造体
       %     - 各フィールドは V に含まれる期待効用変数の名前(string)
-      %     - 各フィールドの値は シンボリック表記の解(sym)
+      %     - 各フィールドの値は 数値解(double)
 
       diff_exprs = EquationStateValueFunction.build_diff_exprs_with_policy(policy);
       V = VariablesHelper.init_state_values();
       [w, c, r, a, p, p_, g, ~, ~, ~] = ParamsHelper.get_symbolic_params();
-      [w_v, c_v, r_v, a_v, p_v, p__v, g_v, ~, ~, ~, V_init] = ParamsHelper.get_valued_params();
+      [w_v, c_v, r_v, a_v, p_v, p__v, g_v, ~, ~, ~, V_init, ~] = ParamsHelper.get_valued_params();
       all_symbolic_params = [
         w, c, reshape(r.', 1, []), reshape(a.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
       ];
@@ -253,9 +252,9 @@ classdef EquationStateValueFunction
       % 1. ベルマン方程式の右辺と左辺の差のシンボリック式に含まれるパラメータを数値に置き換える
       diff_exprs_evaluated = subs(diff_exprs, all_symbolic_params, all_valued_params);
       % 2. ベルマン方程式の右辺と左辺の差のシンボリック式を数値的に解く
-      matlabFunction(diff_exprs_evaluated, 'Vars', {V.'}, 'File', 'func/diff_exprs_func_with_policy');
+      matlabFunction(diff_exprs_evaluated, 'Vars', {V.'}, 'File', 'func/diff_exprs_func_with_policy_state_value');
       options = optimoptions('fsolve', 'Display', 'iter');
-      solution_array = fsolve(@diff_exprs_func_with_policy, V_init, options);
+      solution_array = fsolve(@diff_exprs_func_with_policy_state_value, V_init, options);
       solution = struct();
       for i = 1:length(V)
         varname = char(V(i));
