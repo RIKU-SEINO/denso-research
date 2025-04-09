@@ -114,7 +114,7 @@ classdef Policy
 
   methods (Static)
     function policies = get_all_possible_policies()
-      % すべてのプレイヤ集合のマッチング組み合わせを取得する。
+      % すべての方策を取得する
       %
       % Returns:
       %   policies (cell<Policy>): すべてのPolicyのcell配列
@@ -152,7 +152,7 @@ classdef Policy
       end
     end
 
-    function policy = get_policy_from_optimal_solution(solution)
+    function policy = get_policy_from_optimal_state_value_solution(solution)
       % 各プレイヤ集合における最適期待効用solutionに基づいて、そのsolutionが満たすPolicyを取得する
       %
       % Parameters:

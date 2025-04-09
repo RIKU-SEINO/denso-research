@@ -128,8 +128,8 @@ classdef EquationStateValueFunction
         diff_exprs(i) = equation.diff_expr();
       end
 
-      disp("ベルマン方程式の構築結果")
-      diff_exprs
+      % disp("ベルマン方程式の構築結果")
+      % diff_exprs
     end
 
     function solution = solve_equations()
@@ -163,8 +163,8 @@ classdef EquationStateValueFunction
         solution.(varname) = solution_array(i);
       end
 
-      disp('解')
-      solution
+      % disp('解')
+      % solution
     end
 
     function equations = build_equations_with_policy(policy)
@@ -183,8 +183,8 @@ classdef EquationStateValueFunction
         equations(i) = equation.expr_with_policy(policy);
       end
 
-      disp("ベルマン方程式の構築結果")
-      equations
+      % disp("ベルマン方程式の構築結果")
+      % equations
     end
 
     function solution = solve_equations_analytic_with_policy(policy)
@@ -206,8 +206,8 @@ classdef EquationStateValueFunction
         solution.(varname) = Utils.organize_expr(solution.(varname), [w, c, r(1), r(2), r(3), a(1), a(2), a(3)]);
       end
 
-      disp('解')
-      solution
+      % disp('解')
+      % solution
     end
 
     function diff_exprs = build_diff_exprs_with_policy(policy)
@@ -225,8 +225,8 @@ classdef EquationStateValueFunction
         diff_exprs(i) = equation.diff_expr_with_policy(policy);
       end
 
-      disp("ベルマン方程式の構築結果")
-      diff_exprs    
+      % disp("ベルマン方程式の構築結果")
+      % diff_exprs
     end
 
     function solution = solve_equations_numeric_with_policy(policy)
@@ -261,8 +261,8 @@ classdef EquationStateValueFunction
         solution.(varname) = solution_array(i);
       end
 
-      disp('解')
-      solution
+      % disp('解')
+      % solution
     end
   end
 end

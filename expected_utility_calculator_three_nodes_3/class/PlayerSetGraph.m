@@ -91,13 +91,13 @@ classdef PlayerSetGraph
       end
     end
     
-    function plot_graph(obj)
+    function fig = plot_graph(obj)
       % グラフをlayeredレイアウトで描画する
       % 
       % Returns:
       %   h (handle): グラフの描画ハンドル
       
-      figure
+      fig = figure('Units', 'pixels', 'Position', [0, 0, 3000, 2000]);
       h = plot(obj.graph, 'EdgeColor', 'b', 'LineWidth', 0.5);
       layout(h, 'layered');
       hold on;

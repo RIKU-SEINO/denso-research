@@ -1,7 +1,7 @@
 classdef ResultVisualizer
   % ResultVisualizer クラス
   %
-  % シミュレーション結果を可視化するクラス。
+  % シミュレーション結果を可視化する静的メソッドを提供するクラス
   % 
 
   % 状態価値関数関連の結果表示
@@ -31,9 +31,10 @@ classdef ResultVisualizer
         player_set_graph = PlayerSetGraph(solution, policy);
         
         % グラフを表示
-        player_set_graph.plot_graph();
-        title_str = sprintf('Policy: %d, Optimal: %s', i, optimal_str);
+        fig = player_set_graph.plot_graph();
+        title_str = sprintf('Policy: %d (Optimal: %s) の元でのマルコフ決定過程の遷移グラフ', i, optimal_str);
         title(title_str);
+        exportgraphics(fig, sprintf('result/policy_%d_state_value_graph.png', i));
       end
     end
 
@@ -52,7 +53,7 @@ classdef ResultVisualizer
       num_rows = ceil(length(solutions) / num_cols);
       max_value = max(cell2mat(cellfun(@(x) cell2mat(struct2cell(x)), solutions, 'UniformOutput', false)));
       min_value = min(cell2mat(cellfun(@(x) cell2mat(struct2cell(x)), solutions, 'UniformOutput', false)));
-      figure;
+      fig = figure('Units', 'pixels', 'Position', [0, 0, 3000, 2000]);
       for i = 1:length(solutions)
         subplot(num_rows, num_cols, i);
         solution = solutions{i};
@@ -80,6 +81,67 @@ classdef ResultVisualizer
           text(j, adjusted_value, sprintf('%.0f', state_values(j)), ...
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 45);
         end
+      end
+      sgtitle('Policyごとの状態価値関数');
+      exportgraphics(fig, 'result/state_values.png');
+    end
+  end
+
+  methods (Static)
+    function display_expected_utilities_as_bar(solutions, is_optimal)
+      % 各policyを採用した場合の、プレイヤ集合ごとの各プレイヤの期待効用を棒グラフとして表示する
+      %
+      % Parameters:
+      %   solution (struct): 期待効用方程式の解
+      %   is_optimal (cell<logical>): 最適な方策かどうかのフラグ
+      %
+      % Returns:
+      %   None
+
+      all_possible_taxi_sets = PlayerSet.get_all_possible_taxis_sets();
+      all_possible_passenger_sets = PlayerSet.get_all_possible_passenger_sets();
+      all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
+      all_possible_players = Player.get_all_possible_players();
+
+      num_cols = length(all_possible_taxi_sets);
+      num_rows = length(all_possible_passenger_sets);
+
+      max_value = max(cell2mat(cellfun(@(x) cell2mat(struct2cell(x)), solutions, 'UniformOutput', false)));
+      min_value = min(cell2mat(cellfun(@(x) cell2mat(struct2cell(x)), solutions, 'UniformOutput', false)));
+      x = VariablesHelper.init_expected_utilities();
+
+      for policy_index = 1:length(solutions)
+        solution = solutions{policy_index};
+        if is_optimal(policy_index)
+          optimal_str = 'true';
+        else
+          optimal_str = 'false';
+        end
+        x_evaluated = double(subs(x, fieldnames(solution), struct2cell(solution)));
+  
+        fig = figure('Units', 'pixels', 'Position', [0, 0, 3000, 2000]);
+        for i = 1:size(x_evaluated, 1)
+          player_set = all_possible_player_sets{i};
+          subplot(num_cols, num_rows, i);
+          expected_utilities = x_evaluated(i, :);
+          % 棒グラフを生成
+          bar(expected_utilities);
+          % タイトルとラベルを設定
+          title_str = sprintf('Player Set: %s', player_set.label());
+          title(title_str);
+          xticks(1:length(all_possible_players));
+          xticklabels(Player.labels(all_possible_players));
+          xtickangle(90);
+          ylim([min_value*1.2, max_value*1.2]);
+          grid on;
+          adjusted_value = min(max(max(expected_utilities), 0), max_value) + max_value*0.1;
+          for j = 1:length(all_possible_players)
+            text(j, adjusted_value, sprintf('%.0f', expected_utilities(j)), ...
+              'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 45); 
+          end
+        end
+        sgtitle(sprintf('Policy: %d (Optimal: %s) の元での期待効用', policy_index, optimal_str));
+        exportgraphics(fig, sprintf('result/policy_%d_expected_utilities.png', policy_index));
       end
     end
   end

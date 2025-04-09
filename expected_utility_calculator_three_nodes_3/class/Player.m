@@ -258,9 +258,7 @@ classdef Player
       % ノード1でしかタクシーが空車とならず、ps_{2,1}またはps_{3,1}のみ出現する場合
       all_possible_passengers = {
         Player('ps', 2, 1, 0); ...
-        Player('ps', 2, 3, 0); ...
         Player('ps', 3, 1, 0); ...
-        Player('ps', 3, 2, 0)
       };
     end
 

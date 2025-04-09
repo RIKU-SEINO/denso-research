@@ -62,6 +62,7 @@ classdef EquationExpectedUtility
           player_after_transition = obj.player.one_step_elapsed();
           % 3. 遷移後のプレイヤ集合について、policyに基づいて採用されたマッチングを取得
           player_matching = policy.get_player_matching_by_player_set(player_set_after_transition);
+          fprintf('遷移後のプレイヤ集合-%dにおける採用されたマッチング: %s\n', i, player_matching.label());
           % 4. 遷移後のプレイヤ集合について、期待効用を取得
           % 即時報酬（=R）
           utility = player_matching.get_utility_of_player(player_after_transition, 'symbolic');
@@ -109,8 +110,8 @@ classdef EquationExpectedUtility
         end
       end
 
-      disp("期待効用方程式の構築結果")
-      diff_exprs
+      % disp("期待効用方程式の構築結果")
+      % diff_exprs
     end
 
     function solution = solve_equations_numeric_with_policy(policy)
@@ -155,8 +156,8 @@ classdef EquationExpectedUtility
         end
       end
 
-      disp('期待効用方程式の解')
-      disp(solution)
+      % disp('期待効用方程式の解')
+      % disp(solution)
     end
   end
 end
