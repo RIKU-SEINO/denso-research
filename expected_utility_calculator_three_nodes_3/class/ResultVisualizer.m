@@ -18,7 +18,7 @@ classdef ResultVisualizer
       %   None
 
       for i = 1:length(solutions)
-        fprintf('Policy %d: %s の遷移グラフを作成中...\n', i, policies{i}.label);
+        fprintf('π_%d: %s の遷移グラフを作成中...\n', i, policies{i}.label);
         solution = solutions{i};
         policy = policies{i};
         if is_optimal(i)
@@ -32,8 +32,8 @@ classdef ResultVisualizer
         
         % グラフを表示
         fig = player_set_graph.plot_graph();
-        title_str = sprintf('Policy: %d (Optimal: %s) の元でのマルコフ決定過程の遷移グラフ', i, optimal_str);
-        title(title_str);
+        title(['\pi_{', num2str(i), '} (Optimal: ', optimal_str, ') の元でのマルコフ決定過程の遷移グラフ'], ...
+          'Interpreter', 'tex');
         exportgraphics(fig, sprintf('result/policy_%d_state_value_graph.png', i));
       end
     end
@@ -68,8 +68,8 @@ classdef ResultVisualizer
         bar(state_values);
         
         % タイトルとラベルを設定
-        title_str = sprintf('State Values based on Policy: %d, Optimal: %s', i, optimal_str);
-        title(title_str);
+        title(['\pi_{', num2str(i), '}（Optimal: ', optimal_str, '） に基づく状態価値'], ...
+          'Interpreter', 'tex');    
         xticks(1:length(all_possible_player_sets));
         xticklabels(PlayerSet.labels(all_possible_player_sets));
         xtickangle(90);
@@ -82,7 +82,7 @@ classdef ResultVisualizer
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 45);
         end
       end
-      sgtitle('Policyごとの状態価値関数');
+      sgtitle('方策ごとの状態価値関数');
       exportgraphics(fig, 'result/state_values.png');
     end
   end
@@ -140,7 +140,8 @@ classdef ResultVisualizer
               'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 45); 
           end
         end
-        sgtitle(sprintf('Policy: %d (Optimal: %s) の元での期待効用', policy_index, optimal_str));
+        sgtitle(['\pi_{', num2str(policy_index), '} (Optimal: ', optimal_str, ') の元での期待効用'], ...
+          'Interpreter', 'tex');  
         exportgraphics(fig, sprintf('result/policy_%d_expected_utilities.png', policy_index));
       end
     end

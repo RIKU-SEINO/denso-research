@@ -2,7 +2,7 @@ clc; clear;
 addpath('./class')
 addpath('./func')
 
-% 1. 最適状態価値関数方程式(=ベルマン方程式)を数値的に解く
+% 1. 最適状態価値関数方程式(=ベルマン最適方程式)を数値的に解く
 disp('最適状態価値関数方程式の解を数値的に計算します...');
 optimal_state_value_solution = EquationStateValueFunction.solve_equations();
 optimal_policy = Policy.get_policy_from_optimal_state_value_solution(optimal_state_value_solution);
