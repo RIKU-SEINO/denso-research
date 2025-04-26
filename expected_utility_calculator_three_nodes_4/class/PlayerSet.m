@@ -133,8 +133,30 @@ classdef PlayerSet
       end
     end
 
+    function player = get_taxi(obj)
+      % プレイヤ集合からタクシーを取得する
+      % プレイヤ集合にいるタクシーは最大で1台であるという仮定をおいている。
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   player (Player): 空車のタクシーの Player オブジェクト
+
+      player = [];
+      for i = 1:length(obj.players)
+        if obj.players{i}.is_taxi()
+          % == assumption ==
+          % タクシーの稼働台数は1台であることを前提にしているので、タクシーは最大で1台である
+          player = obj.players{i};
+          break
+        end
+      end
+    end
+
     function player = get_vacant_taxi(obj)
-      % プレイヤ集合から空車のタクシーを取得する
+      % プレイヤ集合から空車のタクシーを取得する。
+      % プレイヤ集合にいるタクシーは最大で1台であるという仮定をおいている。
       %
       % Parameters:
       %   obj (PlayerSet): 対象の PlayerSet オブジェクト
@@ -257,14 +279,14 @@ classdef PlayerSet
       end
     end
 
-    function player_sets = passenger_emerged(obj)
+    function player_sets = get_all_possible_player_sets_after_passenger_emerged(obj)
       % プレイヤ集合から乗客が出現した後のプレイヤ集合の候補を取得する
       %
       % Parameters:
       %   obj (PlayerSet): 対象の PlayerSet オブジェクト
       %
       % Returns:
-      %   player_sets (cell<PlayerSet>): 乗客が出現した後のプレイヤーの集合
+      %   player_sets (cell<PlayerSet>): 乗客が出現した後のプレイヤー集合の候補
 
       all_possible_passenger_sets = PlayerSet.get_all_possible_passenger_sets();
       player_sets = cell(length(all_possible_passenger_sets), 1);
@@ -290,7 +312,7 @@ classdef PlayerSet
       player_set = obj.one_step_elapsed();
 
       % 2. 乗客が出現する
-      player_sets = player_set.passenger_emerged();
+      player_sets = player_set.get_all_possible_player_sets_after_passenger_emerged();
     end
 
     function player_matchings = get_all_possible_player_matchings(obj)
@@ -350,6 +372,22 @@ classdef PlayerSet
 
       variable_state_value = VariablesHelper.get_state_value(obj);
       state_value = solution.(char(variable_state_value));
+    end
+
+    function selected_player_set = passenger_emerged(obj)
+      % プレイヤ集合から確率的に乗客が出現した後のプレイヤ集合を返す
+      % 
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   player_sets (cell<PlayerSet>): 乗客が出現した後のプレイヤ集合
+
+      [~, ~, ~, ~, ~, ~, ~, ~, ~, q, ~, ~] = ParamsHelper.get_valued_params();
+
+      player_sets = obj.get_all_possible_player_sets_after_passenger_emerged();
+      selected_index = randsample(1:length(player_sets), 1, true, q);
+      selected_player_set = player_sets{selected_index};
     end
   end
 

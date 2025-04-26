@@ -122,6 +122,26 @@ classdef PlayerMatching
       end
     end
 
+    function result = matched(obj, player)
+      % 指定したプレイヤがマッチングでマッチされたかを取得する
+      %
+      % Parameters:
+      %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   player (Player): プレイヤ
+      %
+      % Returns:
+      %   result (logical): プレイヤがマッチングされた場合は true, そうでない場合は false
+
+      result = false;
+      for i = 1:length(obj.player_pairs)
+        player_pair = obj.player_pairs{i};
+        if player_pair.has(player) && player_pair.is_matched()
+          result = true;
+          return;
+        end
+      end
+    end
+
     function player_after_matching = get_player_after_matching(obj, player)
       % 指定したプレイヤがマッチング後にどのプレイヤになるかを取得する
       %

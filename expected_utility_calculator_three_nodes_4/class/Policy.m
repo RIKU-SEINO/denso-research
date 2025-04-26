@@ -76,6 +76,27 @@ classdef Policy
       label = char(strjoin(string(labels), ', '));
     end
 
+    function index = index(obj)
+      % Policyのインデックスを取得する
+      %
+      % Returns:
+      %   index (int): Policyのインデックス
+
+      index = -1;
+      all_possible_policies = Policy.get_all_possible_policies();
+      for i = 1:length(all_possible_policies)
+        policy = all_possible_policies{i};
+        if strcmp(policy.id(), obj.id())
+            index = i;
+            break;
+        end
+      end
+
+      if index < 0
+        error("Policy not found in all_possible_policies")
+      end
+    end
+
     function expr = optimality_condition(obj)
       expr = symtrue;
       for i = 1:length(obj.player_matchings)
@@ -127,6 +148,12 @@ classdef Policy
       %           P4 のマッチング候補: {M_{P4,1}}
       %       これらの組み合わせの総数 2 * 3 * 2 * 1 = 12 通りのPolicyが生成される。
 
+      persistent cached_all_possible_policies;
+      if ~isempty(cached_all_possible_policies)
+        policies = cached_all_possible_policies;
+        return;
+      end
+
       all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
       num_sets = length(all_possible_player_sets);
       matching_options = cell(1, num_sets);
@@ -150,6 +177,8 @@ classdef Policy
         end
         policies{k} = Policy(player_matchings);
       end
+
+      cached_all_possible_policies = policies;
     end
 
     function policy = get_policy_from_optimal_state_value_solution(solution)
