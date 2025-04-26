@@ -100,7 +100,7 @@ classdef EquationExpectedUtility
       xt = x.';
       matlabFunction(diffs_evaluated, 'Vars', {xt(:)}, 'File', 'func/diffs_expected_utility_with_policy');
       options = optimoptions('fsolve', 'Display', 'iter');
-      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, x_init] = ParamsHelper.get_valued_params();
+      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, x_init] = ParamsHelper.get_valued_params();
       solution_array = fsolve(@diffs_expected_utility_with_policy, x_init.', options);
       solution = struct();
       index = 1;

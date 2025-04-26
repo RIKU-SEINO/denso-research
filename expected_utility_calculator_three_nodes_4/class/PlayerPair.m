@@ -221,10 +221,10 @@ classdef PlayerPair
       all_possible_players = Player.get_all_possible_players();
 
       if strcmp(mode, 'symbolic')
-        [~, c, ~, a, ~, ~, ~, u_v, u_ps, ~] = ParamsHelper.get_symbolic_params();
+        [~, ~, ~, u_v_positive, u_v_negative, ~, ~, u_ps_positive, u_ps_negative, ~, ~, ~, ~] = ParamsHelper.get_symbolic_params();
         utilities = sym(zeros(length(all_possible_players), 1));
       elseif strcmp(mode, 'numeric')
-        [~, c, ~, a, ~, ~, ~, u_v, u_ps, ~, ~, ~] = ParamsHelper.get_valued_params();
+        [~, ~, ~, u_v_positive, u_v_negative, ~, ~, u_ps_positive, u_ps_negative, ~, ~, ~, ~, ~, ~] = ParamsHelper.get_valued_params();
         utilities = zeros(length(all_possible_players), 1);
       else
         error('modeは''symbolic''または''numeric''でなければなりません');
@@ -238,13 +238,13 @@ classdef PlayerPair
         j = passenger.node;
         k = passenger.destination_node;
 
-        utilities(taxi.index()) = u_v(j, k);
-        utilities(passenger.index()) = u_ps(i, j);
+        utilities(taxi.index()) = u_v_positive(i,j,k);
+        utilities(passenger.index()) = u_ps_positive(i,j);
       elseif obj.is_unmatched_taxi()
-        utilities(taxi.index()) = - c;
+        utilities(taxi.index()) = u_v_negative;
       elseif obj.is_unmatched_passenger()
         j = passenger.node;
-        utilities(passenger.index()) = - a(j);
+        utilities(passenger.index()) = u_ps_negative(j);
       end
     end
   end

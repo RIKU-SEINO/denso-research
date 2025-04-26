@@ -32,7 +32,7 @@ classdef ResultVisualizer
         
         % グラフを表示
         fig = player_set_graph.plot_graph();
-        title(['\pi_{', num2str(i), '} (Optimal: ', optimal_str, ') の元でのマルコフ決定過程の遷移グラフ'], ...
+        title(['\pi_{', num2str(i), '} (Optimal: ', optimal_str, ') の下でのマルコフ決定過程の遷移グラフ'], ...
           'Interpreter', 'tex');
         exportgraphics(fig, sprintf('result/policy_%d_state_value_graph.png', i));
       end
@@ -73,13 +73,13 @@ classdef ResultVisualizer
         xticks(1:length(all_possible_player_sets));
         xticklabels(PlayerSet.labels(all_possible_player_sets));
         xtickangle(90);
-        ylim([min_value*1.2, max_value*1.2]);
+        ylim([min_value*2, max_value*1.2]);
         grid on;
 
         adjusted_value = min(max(max(state_values), 0), max_value) + max_value*0.1;
         for j = 1:length(fieldnames(solution))
           text(j, adjusted_value, sprintf('%.0f', state_values(j)), ...
-            'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 45);
+            'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 90);
         end
       end
       sgtitle('方策ごとの状態価値関数');
@@ -137,10 +137,10 @@ classdef ResultVisualizer
           adjusted_value = min(max(max(expected_utilities), 0), max_value) + max_value*0.1;
           for j = 1:length(all_possible_players)
             text(j, adjusted_value, sprintf('%.0f', expected_utilities(j)), ...
-              'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 45); 
+              'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 0); 
           end
         end
-        sgtitle(['\pi_{', num2str(policy_index), '} (Optimal: ', optimal_str, ') の元での期待効用'], ...
+        sgtitle(['\pi_{', num2str(policy_index), '} (Optimal: ', optimal_str, ') の下での期待効用'], ...
           'Interpreter', 'tex');  
         exportgraphics(fig, sprintf('result/policy_%d_expected_utilities.png', policy_index));
       end

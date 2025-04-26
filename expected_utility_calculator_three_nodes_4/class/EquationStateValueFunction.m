@@ -97,12 +97,13 @@ classdef EquationStateValueFunction
 
       diffs = EquationStateValueFunction.build_diffs_bellman_optimal();
       V = VariablesHelper.init_state_values();
-      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, V_init, ~] = ParamsHelper.get_valued_params();
+      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, V_init, ~] = ParamsHelper.get_valued_params();
 
       % 1. ベルマン方程式の右辺と左辺の差のシンボリック式に含まれるパラメータを数値に置き換える
       diffs_evaluated = ParamsHelper.evaluate_params(diffs);
       % 2. ベルマン方程式の右辺と左辺の差のシンボリック式を数値的に解く
       matlabFunction(diffs_evaluated, 'Vars', {V.'}, 'File', 'func/diffs_bellman_optimal');
+      assignin('base', 'diffs_evaluated', diffs_evaluated)
       options = optimoptions('fsolve', 'Display', 'iter');
       solution_array = fsolve(@diffs_bellman_optimal, V_init, options);
       solution = struct();
@@ -139,12 +140,12 @@ classdef EquationStateValueFunction
 
       equations = EquationStateValueFunction.build_equations_with_policy(policy);
       V = VariablesHelper.init_state_values();
-      [w, c, r, a, ~, ~, ~, ~, ~, ~] = ParamsHelper.get_symbolic_params();
+      [w, c, a, ~, ~, r, b, ~, ~, ~, ~, ~, ~] = ParamsHelper.get_symbolic_params();
       all_vars = symvar(V);
       solution = solve(equations, all_vars);
       for i = 1:length(all_vars)
         varname = char(all_vars(i));
-        solution.(varname) = Utils.organize_expr(solution.(varname), [w, c, r(1), r(2), r(3), a(1), a(2), a(3)]);
+        solution.(varname) = Utils.organize_expr(solution.(varname), [w, c, a, r(1), r(2), r(3), b(1), b(2), b(3)]);
       end
     end
 
@@ -175,7 +176,7 @@ classdef EquationStateValueFunction
 
       diffs = EquationStateValueFunction.build_diffs_bellman_with_policy(policy);
       V = VariablesHelper.init_state_values();
-      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, V_init, ~] = ParamsHelper.get_valued_params();
+      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, V_init, ~] = ParamsHelper.get_valued_params();
 
       % 1. ベルマン方程式の右辺と左辺の差のシンボリック式に含まれるパラメータを数値に置き換える
       diffs_evaluated = ParamsHelper.evaluate_params(diffs);

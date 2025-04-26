@@ -232,7 +232,7 @@ classdef PlayerMatching
       %
       % Returns:
       %   action_value (sym): マッチングの行動価値
-      [~, ~, ~, ~, ~, ~, g, ~, ~, q] = ParamsHelper.get_symbolic_params();
+      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, g, q] = ParamsHelper.get_symbolic_params();
 
       player_set = obj.get_player_set_after_matching();
       player_sets_after_transition = player_set.get_all_possible_player_sets_after_transition();
@@ -255,7 +255,7 @@ classdef PlayerMatching
       % Returns:
       %   action_value_of_player (sym): プレイヤの行動価値
 
-      [~, ~, ~, ~, ~, ~, g, ~, ~, q] = ParamsHelper.get_symbolic_params();
+      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, g, q] = ParamsHelper.get_symbolic_params();
 
       if obj.get_player_set_before_matching().has(player)
         action_value_of_player = obj.get_utility_of_player(player, 'symbolic');

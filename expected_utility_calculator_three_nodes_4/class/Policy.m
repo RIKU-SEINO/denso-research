@@ -106,16 +106,8 @@ classdef Policy
     end
 
     function expr = optimality_condition_evaluated(obj)
-      [w, c, r, a, p, p_, g, ~, ~, ~] = ParamsHelper.get_symbolic_params();
-      [w_v, c_v, r_v, a_v, p_v, p__v, g_v, ~, ~, ~, ~, ~] = ParamsHelper.get_valued_params();
-      all_symbolic_params = [
-        w, c, reshape(r.', 1, []), reshape(a.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
-      ];
-      all_valued_params = [
-        w_v, c_v, reshape(r_v.', 1, []), reshape(a_v.', 1, []), reshape(p_v.', 1, []), reshape(p__v.', 1, []), g_v
-      ];
       expr = obj.optimality_condition();
-      expr = subs(expr, all_symbolic_params, all_valued_params);
+      expr = ParamsHelper.evaluate_params(expr);
     end
 
     function player_matching = get_player_matching_by_player_set(obj, player_set)
