@@ -1,6 +1,8 @@
 clc; clear;
 addpath('./class')
 addpath('./func')
+mkdir 'result'
+mkdir 'func'
 
 % 1. ベルマン最適方程式を数値的に解く
 disp("STEP1: ベルマン最適方程式を数値的に解く");
@@ -27,15 +29,15 @@ for i = 1:length(policies)
   end
 end
 
-% 3. 結果の表示
-% 3-1. プレイヤ集合の状態価値関数をグラフとして表示
-ResultVisualizer.display_state_values_as_graphs(state_value_solutions, policies, is_optimal);
+% % 3. 結果の表示
+% % 3-1. プレイヤ集合の状態価値関数をグラフとして表示
+% ResultVisualizer.display_state_values_as_graphs(state_value_solutions, policies, is_optimal);
 
-% 3-2. プレイヤ集合の状態価値関数を棒グラフとして表示
-ResultVisualizer.display_state_values_as_bar(state_value_solutions, is_optimal);
+% % 3-2. プレイヤ集合の状態価値関数を棒グラフとして表示
+% ResultVisualizer.display_state_values_as_bar(state_value_solutions, is_optimal);
 
-% 3-3. プレイヤ/プレイヤ集合の期待効用をグラフとして表示
-ResultVisualizer.display_expected_utilities_as_bar(expected_utility_solutions, is_optimal);
+% % 3-3. プレイヤ/プレイヤ集合の期待効用をグラフとして表示
+% ResultVisualizer.display_expected_utilities_as_bar(expected_utility_solutions, is_optimal);
 
 
 
