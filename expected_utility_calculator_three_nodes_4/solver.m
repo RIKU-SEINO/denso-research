@@ -40,7 +40,9 @@ if data_regenerate == 'y'
   end
 
   % 3. 結果の保存
-  delete('result/data.mat');
+  if exist('result/data.mat', 'file')
+    delete('result/data.mat');
+  end
   save('result/data.mat', 'optimal_state_value_solution', 'optimal_policy', 'state_value_solutions', 'expected_utility_solutions', 'is_optimal');
 else
   data = load('result/data.mat');

@@ -1,4 +1,4 @@
-clc; clear; close;
+clc; clear; close all;
 addpath('./class')
 addpath('./func')
 

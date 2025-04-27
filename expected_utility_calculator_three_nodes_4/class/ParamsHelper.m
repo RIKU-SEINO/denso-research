@@ -80,7 +80,7 @@ classdef ParamsHelper
             1, 0, 0];
       
       % 割引率
-      g = 0.95;
+      g = 0;
 
       % 一般の場合はtrans_prob_vecを使う
       % q = ParamsHelper.trans_prob_vec(p, p_);

@@ -64,26 +64,25 @@ classdef ResultVisualizer
         end
         
         state_values = cell2mat(struct2cell(solution));
-        % 棒グラフを生成
         bar(state_values);
         
-        % タイトルとラベルを設定
-        title(['\pi_{', num2str(i), '}（Optimal: ', optimal_str, '） に基づく状態価値'], ...
+        title(['\pi_{', num2str(i), '}（Optimal: ', optimal_str, '）'], ...
           'Interpreter', 'tex');    
         xticks(1:length(all_possible_player_sets));
         xticklabels(PlayerSet.labels(all_possible_player_sets));
         xtickangle(90);
-        ylim([min_value*2, max_value*1.2]);
+        ylim([min_value*1.2, max_value*1.8]);
+        ytickformat('%,.0f');
         grid on;
 
-        adjusted_value = min(max(max(state_values), 0), max_value) + max_value*0.1;
+        adjusted_value = min(max(max(state_values), 0), max_value) + max_value*0.5;
         for j = 1:length(fieldnames(solution))
-          text(j, adjusted_value, sprintf('%.0f', state_values(j)), ...
+          text(j+0.4, adjusted_value, sprintf('%.0f', state_values(j)), ...
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 90);
         end
       end
       sgtitle('方策ごとの状態価値関数');
-      exportgraphics(fig, 'result/state_values.png');
+      exportgraphics(fig, 'result/state_value_bar.png', 'Resolution', '300');
     end
   end
 

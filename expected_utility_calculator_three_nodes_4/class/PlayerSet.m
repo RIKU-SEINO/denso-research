@@ -383,7 +383,7 @@ classdef PlayerSet
       % Returns:
       %   player_sets (cell<PlayerSet>): 乗客が出現した後のプレイヤ集合
 
-      [~, ~, ~, ~, ~, ~, ~, ~, ~, q, ~, ~] = ParamsHelper.get_valued_params();
+      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, q, ~, ~] = ParamsHelper.get_valued_params();
 
       player_sets = obj.get_all_possible_player_sets_after_passenger_emerged();
       selected_index = randsample(1:length(player_sets), 1, true, q);
