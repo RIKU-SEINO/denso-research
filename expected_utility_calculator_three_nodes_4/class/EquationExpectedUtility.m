@@ -53,6 +53,20 @@ classdef EquationExpectedUtility
       % 期待効用方程式の右辺と左辺の差を計算
       diff = left - right;
     end
+
+    function equation = build_equation_expected_utility_with_policy(obj, policy)
+      % objで指定されたプレイヤ集合とプレイヤにおける、指定された方策policyに従った場合の期待効用方程式を取得する
+      %
+      % Parameters:
+      %   obj (EquationExpectedUtility): EquationExpectedUtility インスタンス
+      %   policy (Policy): 方策
+      %
+      % Returns:
+      %   equation (sym): obj.player_setで指定されたプレイヤ集合と、obj.playerで指定されたプレイヤにおける期待効用方程式のシンボリック等式
+
+      diff = obj.diff_expected_utility_with_policy(policy);
+      equation = diff == 0;
+    end
   end
 
   methods (Static)
@@ -78,6 +92,19 @@ classdef EquationExpectedUtility
           index = index + 1;
         end
       end
+    end
+
+    function equations = build_equations_expected_utility_with_policy(policy)
+      % Policyに基づいて、すべてのプレイヤ集合、プレイヤにおける期待効用方程式を取得する
+      %
+      % Parameters:
+      %   policy (Policy): 方策
+      %
+      % Returns:
+      %   equations (sym): すべてのプレイヤ集合、プレイヤにおける期待効用方程式のシンボリック式
+
+      diffs = EquationExpectedUtility.build_diffs_expected_utility_with_policy(policy);
+      equations = diffs == 0;
     end
 
     function solution = solve_expected_utility_with_policy_numeric(policy)
@@ -110,6 +137,31 @@ classdef EquationExpectedUtility
           solution.(varname) = solution_array(index);
           index = index + 1;
         end
+      end
+    end
+
+    function solution = solve_expected_utility_with_policy_symbolic(policy)
+      % Policyに基づいて、すべてのプレイヤ集合、プレイヤにおける期待効用方程式をシンボリックに解く
+      % ただし、割引率はget_valued_paramsで取得した数値に置き換える
+      %
+      % Parameters:
+      %   policy (Policy): 方策
+      %
+      % Returns:
+      %   solution (struct): 期待効用方程式のシンボリックな解を格納する構造体
+      %     - 各フィールドは x に含まれる期待効用変数の名前(string)
+      %     - 各フィールドの値は シンボリックな解(sym)
+
+      equations = EquationExpectedUtility.build_equations_expected_utility_with_policy(policy);
+      x = VariablesHelper.init_expected_utilities();
+      [w, c, a, ~, ~, r, b, ~, ~, ~, ~, g, ~] = ParamsHelper.get_symbolic_params();
+      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, g_v, ~, ~, ~] = ParamsHelper.get_valued_params();
+      all_vars = symvar(x);
+      equations = subs(equations, g, g_v);
+      solution = solve(equations, all_vars);
+      for i = 1:length(all_vars)
+        varname = char(all_vars(i));
+        solution.(varname) = collect(solution.(varname), [w, c, a, r(2), r(3), b(2), b(3)]);
       end
     end
   end
