@@ -80,7 +80,7 @@ classdef ParamsHelper
             1, 0, 0];
       
       % 割引率
-      g = 0;
+      g = 0.95;
 
       % 一般の場合はtrans_prob_vecを使う
       % q = ParamsHelper.trans_prob_vec(p, p_);
@@ -169,7 +169,7 @@ classdef ParamsHelper
       q(4) = (1 - p(1)) * p(2)*p_(2, 1) * p(3)*p_(3, 1);
     end
 
-    function expr = evaluate_params(expr)
+    function expr = evaluate_all_params(expr)
       % シンボリックな式のパラメータだけを数値的に評価する
       % 
       % Parameters:
@@ -186,6 +186,50 @@ classdef ParamsHelper
       ];
       
       expr = subs(expr, all_symbolic_params, all_valued_params);
+    end
+
+    function expr = evaluate_except_params(expr, params)
+      % シンボリックな式について、指定したパラメータ以外を数値的に評価する
+      % 
+      % Parameters:
+      %   expr (sym): シンボリックな式
+      %   params (sym): 評価しないパラメータ
+      % Returns:
+      %   expr (sym): 指定パラメータ以外を数値的に評価した式。変数や未評価のパラメータはsymbolicのまま
+      [w, c, a, ~, ~, r, b, ~, ~, p, p_, g, ~] = ParamsHelper.get_symbolic_params();
+      [w_val, c_val, a_val, ~, ~, r_val, b_val, ~, ~, p_val, p__val, g_val, ~, ~, ~] = ParamsHelper.get_valued_params();
+      all_symbolic_params = [
+        w, c, a, reshape(r.', 1, []), reshape(b.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
+      ];
+      all_valued_params = [
+        w_val, c_val, a_val, reshape(r_val.', 1, []), reshape(b_val.', 1, []), reshape(p_val.', 1, []), reshape(p__val.', 1, []), g_val
+      ];
+
+      % 文字列指定がある場合はシンボルに変換
+      if ischar(params) || isstring(params)
+        params = cellstr(params);  % string配列をcell配列に
+      end
+      if iscell(params)
+        % 名前からシンボリック変数を抽出
+        param_syms = sym.empty(1, 0);
+        for i = 1:length(params)
+          match_idx = find(arrayfun(@(s) strcmp(char(s), params{i}), all_symbolic_params));
+          if ~isempty(match_idx)
+            param_syms(end+1) = all_symbolic_params(match_idx);
+          end
+        end
+        params = param_syms;
+      end
+
+      % 指定されたparamsに一致しないパラメータを探す
+      is_target = ~ismember(all_symbolic_params, params);
+
+      % 対応するsymbolic-paramとその数値を抽出
+      target_symbolic_params = all_symbolic_params(is_target);
+      target_valued_params   = all_valued_params(is_target);
+
+      % 指定パラメータのみを数値に置き換え
+      expr = subs(expr, target_symbolic_params, target_valued_params);
     end
   end
 end

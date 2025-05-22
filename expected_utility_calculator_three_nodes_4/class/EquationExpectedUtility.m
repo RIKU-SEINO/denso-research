@@ -107,6 +107,22 @@ classdef EquationExpectedUtility
       equations = diffs == 0;
     end
 
+    % function [A, B] = build_matrix_expected_utility_with_policy(policy)
+    %   % Policyに基づいて、すべてのプレイヤ集合、プレイヤにおける期待効用方程式を解くための行列AとBを取得する
+    %   %
+    %   % Parameters:
+    %   %   policy (Policy): 方策
+    %   %
+    %   % Returns:
+    %   %   A (sym): 期待効用方程式を数値的に解くための行列A
+    %   %   B (sym): 期待効用方程式を数値的に解くための行列B
+
+    %   equations = EquationExpectedUtility.build_equations_expected_utility_with_policy(policy);
+    %   x = VariablesHelper.init_expected_utilities();
+    %   all_vars = symvar(x);
+    %   [A, B] = equationsToMatrix(equations, all_vars);
+    % end
+
     function solution = solve_expected_utility_with_policy_numeric(policy)
       % Policyに基づいて、すべてのプレイヤ集合、プレイヤにおける期待効用方程式を数値的に解く
       %
@@ -122,7 +138,7 @@ classdef EquationExpectedUtility
       x = VariablesHelper.init_expected_utilities();
 
       % 1. 期待効用方程式の右辺と左辺の差のシンボリック式に含まれるパラメータを数値に置き換える
-      diffs_evaluated = ParamsHelper.evaluate_params(diffs);
+      diffs_evaluated = ParamsHelper.evaluate_all_params(diffs);
       % 2. 期待効用方程式の右辺と左辺の差のシンボリック式に含まれる期待効用変数を数値に置き換える
       xt = x.';
       matlabFunction(diffs_evaluated, 'Vars', {xt(:)}, 'File', 'func/diffs_expected_utility_with_policy');
@@ -142,7 +158,6 @@ classdef EquationExpectedUtility
 
     function solution = solve_expected_utility_with_policy_symbolic(policy)
       % Policyに基づいて、すべてのプレイヤ集合、プレイヤにおける期待効用方程式をシンボリックに解く
-      % ただし、割引率はget_valued_paramsで取得した数値に置き換える
       %
       % Parameters:
       %   policy (Policy): 方策
@@ -154,15 +169,34 @@ classdef EquationExpectedUtility
 
       equations = EquationExpectedUtility.build_equations_expected_utility_with_policy(policy);
       x = VariablesHelper.init_expected_utilities();
-      [w, c, a, ~, ~, r, b, ~, ~, ~, ~, g, ~] = ParamsHelper.get_symbolic_params();
-      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, g_v, ~, ~, ~] = ParamsHelper.get_valued_params();
+      [w, c, a, ~, ~, r, b, ~, ~, ~, ~, ~, ~] = ParamsHelper.get_symbolic_params();
       all_vars = symvar(x);
-      equations = subs(equations, g, g_v);
       solution = solve(equations, all_vars);
       for i = 1:length(all_vars)
         varname = char(all_vars(i));
         solution.(varname) = collect(solution.(varname), [w, c, a, r(2), r(3), b(2), b(3)]);
       end
+    end
+
+
+    function solution = solve_expected_utility_with_policy_symbolic_except_params(policy, params_to_exclude)
+      % Policyに基づいて、すべてのプレイヤ集合、プレイヤにおける期待効用方程式をシンボリックに解く
+      % ただし、指定したパラメータparams_to_exclude以外を数値に置き換える
+      %
+      % Parameters:
+      %   policy (Policy): 方策
+      %   params_to_exclude (string[]): 数値に置き換えないパラメータの名前(string)の配列
+      %
+      % Returns:
+      %   solution (struct): 期待効用方程式のシンボリックな解を格納する構造体
+      %     - 各フィールドは x に含まれる期待効用変数の名前(string)
+      %     - 各フィールドの値は シンボリックな解(sym)
+
+      equations = EquationExpectedUtility.build_equations_expected_utility_with_policy(policy);
+      x = VariablesHelper.init_expected_utilities();
+      all_vars = symvar(x);
+      equations_evaluated = ParamsHelper.evaluate_except_params(equations, params_to_exclude);
+      solution = solve(equations_evaluated, all_vars);
     end
   end
 end

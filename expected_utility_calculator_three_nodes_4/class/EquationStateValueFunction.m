@@ -69,6 +69,20 @@ classdef EquationStateValueFunction
       % 3. ベルマン方程式の右辺と左辺の差
       diff = left - right;
     end
+
+    function equation = build_equation_bellman_with_policy(obj, policy)
+      % 指定したPolicyに基づいて、obj.player_setで指定されたプレイヤ集合におけるベルマン方程式を構築する
+      %
+      % Parameters:
+      %   obj (EquationStateValueFunction): EquationStateValueFunction インスタンス
+      %   policy (Policy): プレイヤ集合のマッチングの組み合わせ
+      %
+      % Returns:
+      %   equation (sym): 指定したPolicyに基づいて、obj.player_setで指定されたプレイヤ集合におけるベルマン方程式のシンボリック等式
+
+      diff = obj.diff_bellman_with_policy(policy);
+      equation = diff == 0;
+    end
   end
 
   % static
@@ -100,7 +114,7 @@ classdef EquationStateValueFunction
       [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, V_init, ~] = ParamsHelper.get_valued_params();
 
       % 1. ベルマン方程式の右辺と左辺の差のシンボリック式に含まれるパラメータを数値に置き換える
-      diffs_evaluated = ParamsHelper.evaluate_params(diffs);
+      diffs_evaluated = ParamsHelper.evaluate_all_params(diffs);
       % 2. ベルマン方程式の右辺と左辺の差のシンボリック式を数値的に解く
       matlabFunction(diffs_evaluated, 'Vars', {V.'}, 'File', 'func/diffs_bellman_optimal');
       assignin('base', 'diffs_evaluated', diffs_evaluated)
@@ -125,11 +139,11 @@ classdef EquationStateValueFunction
       for i = 1:length(all_possible_player_sets)
         player_set = all_possible_player_sets{i};
         equation = EquationStateValueFunction(player_set);
-        equations(i) = equation.diff_bellman_with_policy(policy) == 0;
+        equations(i) = equation.build_equation_bellman_with_policy(policy);
       end
     end
 
-    function solution = solve_equations_bellman_with_policy_analytic(policy)
+    function solution = solve_equations_bellman_with_policy_symbolic(policy)
       % 方策に基づいて、ベルマン方程式を解析的に解く
       %
       % Parameters:
@@ -138,15 +152,35 @@ classdef EquationStateValueFunction
       %     - 各フィールドは V に含まれる期待効用変数の名前(string)
       %     - 各フィールドの値は シンボリック表記の解(sym)
 
-      equations = EquationStateValueFunction.build_equations_with_policy(policy);
+      equations = EquationStateValueFunction.build_equations_bellman_with_policy(policy);
       V = VariablesHelper.init_state_values();
       [w, c, a, ~, ~, r, b, ~, ~, ~, ~, ~, ~] = ParamsHelper.get_symbolic_params();
       all_vars = symvar(V);
       solution = solve(equations, all_vars);
       for i = 1:length(all_vars)
         varname = char(all_vars(i));
-        solution.(varname) = Utils.organize_expr(solution.(varname), [w, c, a, r(1), r(2), r(3), b(1), b(2), b(3)]);
+        solution.(varname) = collect(solution.(varname), [w, c, a, r(2), r(3), b(2), b(3)]);
       end
+    end
+
+    function solution = solve_equations_bellman_with_policy_symbolic_except_params(policy, params_to_exclude)
+      % 方策に基づいて、ベルマン方程式をシンボリックに解く
+      % ただし、指定したパラメータparams_to_exclude以外を数値に置き換える
+      %
+      % Parameters:
+      %   policy (Policy): 方策
+      %   params_to_exclude (string[]): 数値に置き換えないパラメータの名前(string)の配列
+      %
+      % Returns:
+      %   solution (struct): ベルマン方程式のシンボリックな解を格納する構造体
+      %     - 各フィールドは V に含まれる期待効用変数の名前(string)
+      %     - 各フィールドの値は シンボリックな解(sym)
+
+      equations = EquationStateValueFunction.build_equations_bellman_with_policy(policy);
+      V = VariablesHelper.init_state_values();
+      all_vars = symvar(V);
+      equations_evaluated = ParamsHelper.evaluate_except_params(equations, params_to_exclude);
+      solution = solve(equations_evaluated, all_vars);
     end
 
     function diffs = build_diffs_bellman_with_policy(policy)
@@ -179,7 +213,7 @@ classdef EquationStateValueFunction
       [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, V_init, ~] = ParamsHelper.get_valued_params();
 
       % 1. ベルマン方程式の右辺と左辺の差のシンボリック式に含まれるパラメータを数値に置き換える
-      diffs_evaluated = ParamsHelper.evaluate_params(diffs);
+      diffs_evaluated = ParamsHelper.evaluate_all_params(diffs);
       % 2. ベルマン方程式の右辺と左辺の差のシンボリック式を数値的に解く
       matlabFunction(diffs_evaluated, 'Vars', {V.'}, 'File', 'func/diffs_bellman_with_policy');
       options = optimoptions('fsolve', 'Display', 'iter');

@@ -107,7 +107,7 @@ classdef Policy
 
     function expr = optimality_condition_evaluated(obj)
       expr = obj.optimality_condition();
-      expr = ParamsHelper.evaluate_params(expr);
+      expr = ParamsHelper.evaluate_all_params(expr);
     end
 
     function player_matching = get_player_matching_by_player_set(obj, player_set)
