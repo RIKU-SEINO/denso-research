@@ -84,7 +84,22 @@ classdef ResultVisualizer
       sgtitle('方策ごとの状態価値関数');
       exportgraphics(fig, 'result/state_value_bar.png', 'Resolution', '300');
     end
-  end
+
+    function display_max_state_value_with_policy_color_p2_p3(solutions_symbolic)
+      % 方策ごとの状態価値関数をp2, p3の関数として評価し、
+      % 最大の状態価値を与える方策ごとに色分けして表示する
+  
+      all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
+      fields = fieldnames(solutions_symbolic{1});
+      for i = 1:length(all_possible_player_sets)
+        player_set = all_possible_player_sets{i};
+        disp(player_set.label());
+        funcs = cellfun(@(x) x.(fields{i}), solutions_symbolic, 'UniformOutput', false);
+        Utils.plot_max_symbolic_funcs_3d(funcs, ["p_2", "p_3"], [0, 1], [0, 1], 100);
+        title(sprintf('Player Set: %s', player_set.label()));
+      end
+    end
+  end        
 
   methods (Static)
     function display_expected_utilities_as_bar(solutions, is_optimal)
