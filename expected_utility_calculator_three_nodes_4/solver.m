@@ -114,3 +114,8 @@ if calc_mode == 1 || calc_mode == 3
   ResultVisualizer.display_expected_utilities_as_bar(expected_utility_solutions, is_optimal);
 end
 
+% 5. シンボリック計算結果の表示（シンボリック計算モードが選択された場合のみ）
+if calc_mode == 2 || calc_mode == 3
+  ResultVisualizer.display_max_state_value_with_policy_color_p2_p3(state_value_solutions_symbolic);
+end
+

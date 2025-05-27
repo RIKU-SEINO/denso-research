@@ -95,7 +95,7 @@ classdef ResultVisualizer
         player_set = all_possible_player_sets{i};
         disp(player_set.label());
         funcs = cellfun(@(x) x.(fields{i}), solutions_symbolic, 'UniformOutput', false);
-        Utils.plot_max_symbolic_funcs_3d(funcs, ["p_2", "p_3"], [0, 1], [0, 1], 100);
+        Utils.plot_max_symbolic_funcs_3d(funcs, ["p_2", "p_3"], [0, 1], [0, 1], 500);
         title(sprintf('Player Set: %s', player_set.label()));
       end
     end
