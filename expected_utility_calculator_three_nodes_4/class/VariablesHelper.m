@@ -82,5 +82,35 @@ classdef VariablesHelper
       x = VariablesHelper.init_expected_utilities();
       expected_utility = x(player_set.index(), player.index());
     end
+
+    function sorted_state_values_solution = sort_state_values_solution(state_values_solution)
+      % 状態価値の解をソートして返す
+      %
+      % Parameters:
+      %   state_values_solution (struct): 状態価値の解
+      %
+      % Returns:
+      %   sorted_state_values_solution (struct): ソートされた状態価値の解
+
+      V = VariablesHelper.init_state_values();
+      key_order = arrayfun(@char, V, 'UniformOutput', false);
+      
+      sorted_state_values_solution = Utils.sort_struct_by_keys(state_values_solution, key_order);
+    end
+
+    function sorted_expected_utilities_solution = sort_expected_utilities_solution(expected_utilities_solution)
+      % 期待効用の解をソートして返す
+      %
+      % Parameters:
+      %   expected_utilities_solution (struct): 期待効用の解
+      %
+      % Returns:
+      %   sorted_expected_utilities_solution (struct): ソートされた期待効用の解
+
+      x = VariablesHelper.init_expected_utilities();
+      key_order = arrayfun(@char, x, 'UniformOutput', false);
+
+      sorted_expected_utilities_solution = Utils.sort_struct_by_keys(expected_utilities_solution, key_order);
+    end
   end
 end

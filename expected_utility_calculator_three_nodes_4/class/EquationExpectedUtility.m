@@ -154,6 +154,7 @@ classdef EquationExpectedUtility
           index = index + 1;
         end
       end
+      solution = VariablesHelper.sort_expected_utilities_solution(solution);
     end
 
     function solution = solve_expected_utility_with_policy_symbolic(policy)
@@ -176,6 +177,7 @@ classdef EquationExpectedUtility
         varname = char(all_vars(i));
         solution.(varname) = collect(solution.(varname), [w, c, a, r(2), r(3), b(2), b(3)]);
       end
+      solution = VariablesHelper.sort_expected_utilities_solution(solution);
     end
 
 
@@ -197,6 +199,7 @@ classdef EquationExpectedUtility
       all_vars = symvar(x);
       equations_evaluated = ParamsHelper.evaluate_except_params(equations, params_to_exclude);
       solution = solve(equations_evaluated, all_vars);
+      solution = VariablesHelper.sort_expected_utilities_solution(solution);
     end
   end
 end

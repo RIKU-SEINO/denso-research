@@ -122,6 +122,18 @@ classdef Utils
       grid on
       view(45,30)
       axis tight
-    end  
+    end
+
+    function sorted_s = sort_struct_by_keys(s, key_order)
+      % struct の現在のフィールド
+      s_fields = fieldnames(s);
+      
+      % key_order にないフィールドを後ろに追加（オプション）
+      remaining = setdiff(s_fields, key_order, 'stable');
+      full_order = [key_order(:); remaining(:)];  % 縦ベクトル化
+      
+      % 並び替え
+      sorted_s = orderfields(s, full_order);
+  end
   end
 end

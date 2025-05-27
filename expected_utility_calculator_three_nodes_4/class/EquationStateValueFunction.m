@@ -125,6 +125,7 @@ classdef EquationStateValueFunction
         varname = char(V(i));
         solution.(varname) = solution_array(i);
       end
+      solution = VariablesHelper.sort_state_values_solution(solution);
     end
 
     function equations = build_equations_bellman_with_policy(policy)
@@ -161,6 +162,7 @@ classdef EquationStateValueFunction
         varname = char(all_vars(i));
         solution.(varname) = collect(solution.(varname), [w, c, a, r(2), r(3), b(2), b(3)]);
       end
+      solution = VariablesHelper.sort_state_values_solution(solution);
     end
 
     function solution = solve_equations_bellman_with_policy_symbolic_except_params(policy, params_to_exclude)
@@ -181,6 +183,7 @@ classdef EquationStateValueFunction
       all_vars = symvar(V);
       equations_evaluated = ParamsHelper.evaluate_except_params(equations, params_to_exclude);
       solution = solve(equations_evaluated, all_vars);
+      solution = VariablesHelper.sort_state_values_solution(solution);
     end
 
     function diffs = build_diffs_bellman_with_policy(policy)
@@ -223,6 +226,7 @@ classdef EquationStateValueFunction
         varname = char(V(i));
         solution.(varname) = solution_array(i);
       end
+      solution = VariablesHelper.sort_state_values_solution(solution);
     end
   end
 end
