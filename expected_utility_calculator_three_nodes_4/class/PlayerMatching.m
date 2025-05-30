@@ -55,6 +55,20 @@ classdef PlayerMatching
 
       obj.player_pairs = PlayerPair.sort_player_pairs(obj.player_pairs);
     end
+
+    function result = has(obj, player_pair)
+      % 指定されたプレイヤペアが、このプレイヤマッチングに含まれているかを判定する
+      %
+      % Parameters:
+      %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   player_pair (PlayerPair): 判定対象のプレイヤペア
+      %
+      % Returns:
+      %   result (logical): 指定されたプレイヤペアが、このプレイヤマッチングに含まれている場合は true, そうでない場合は false
+
+      result = Utils.ismember(player_pair, obj.player_pairs);
+    end
+    
   end
 
   % other methods
@@ -323,6 +337,31 @@ classdef PlayerMatching
         optimal_action_value = obj.get_action_value();
 
         expr = expr & (not_optimal_action_value <= optimal_action_value);
+      end
+    end
+
+    function expr = bp_stability_condition(obj, current_policy, expected_utility_solutions)
+      % 指定したマッチングobjが方策current_policyの下でBP安定であるための条件式を取得する
+      %
+      % Parameters:
+      %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   current_policy (Policy): 現在の方策
+      %   expected_utility_solutions (cell<struct>): すべての方策ごとに計算された期待効用の計算結果のセル配列。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
+      %
+      % Returns:
+      %   expr (sym): 指定したマッチングobjが方策current_policyの下でBP安定であるための条件式
+
+      expr = symtrue;
+      player_set = obj.get_player_set_before_matching();
+      all_possible_player_pairs = player_set.get_all_possible_player_pairs();
+      for i = 1:length(all_possible_player_pairs)
+        player_pair = all_possible_player_pairs{i};
+        if obj.has(player_pair)
+          continue;
+        end
+
+        bp_condition_expr = player_pair.bp_condition(player_set, current_policy, expected_utility_solutions);
+        expr = and(expr, not(bp_condition_expr));
       end
     end
   end

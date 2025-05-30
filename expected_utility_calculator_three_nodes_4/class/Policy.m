@@ -52,6 +52,19 @@ classdef Policy
 
       obj.player_matchings = PlayerMatching.sort_player_matchings(obj.player_matchings);
     end
+
+    function result = has(obj, player_matching)
+      % 指定されたプレイヤマッチングが、この方策に含まれているかを判定する
+      %
+      % Parameters:
+      %   obj (Policy): Policy インスタンス
+      %   player_matching (PlayerMatching): 判定対象のプレイヤマッチング
+      %
+      % Returns:
+      %   result (logical): 指定されたプレイヤマッチングが、この方策に含まれている場合は true, そうでない場合は false
+
+      result = Utils.ismember(player_matching, obj.player_matchings);
+    end
   end
 
   % other
@@ -112,6 +125,7 @@ classdef Policy
 
     function player_matching = get_player_matching_by_player_set(obj, player_set)
       % Policyにおいて、指定されたplayer_setに対応するPlayerMatchingを取得する
+      % M^\pi(s)に相当する
       %
       % Parameters:
       %   obj (Policy): Policy インスタンス
@@ -122,6 +136,24 @@ classdef Policy
 
       idx = player_set.index();
       player_matching = obj.player_matchings{idx};
+    end
+
+    function expr = bp_stability_condition(obj, expected_utility_solutions)
+      % 指定した方策objがBP安定であるための条件式を取得する
+      %
+      % Parameters:
+      %   obj (Policy): Policy インスタンス
+      %   expected_utility_solutions (cell<struct>): すべての方策ごとに計算された期待効用の計算結果のセル配列。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
+      %
+      % Returns:
+      %   expr (sym): 指定した方策objがBP安定であるための条件式
+
+      expr = symtrue;
+      for i = 1:length(obj.player_matchings)
+        player_matching = obj.player_matchings{i};
+        bp_stability_condition_expr = player_matching.bp_stability_condition(obj, expected_utility_solutions);
+        expr = and(expr, bp_stability_condition_expr);
+      end
     end
   end
 
