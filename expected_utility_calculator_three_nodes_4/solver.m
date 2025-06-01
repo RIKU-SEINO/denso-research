@@ -1,4 +1,4 @@
-clc; clear;
+clc; clear; close all;
 addpath('./class')
 addpath('./func')
 mkdir 'result'
@@ -61,7 +61,7 @@ if calc_mode == 1 || calc_mode == 3
     end
     save('result/data.mat', 'optimal_state_value_solution', 'optimal_policy', 'state_value_solutions', 'expected_utility_solutions', 'is_optimal');
   else
-    data = load('result/data.mat');
+    data = load('result_g_095/data.mat');
     policies = Policy.get_all_possible_policies();
     optimal_state_value_solution = data.optimal_state_value_solution;
     optimal_policy = data.optimal_policy;
@@ -78,14 +78,13 @@ if calc_mode == 2 || calc_mode == 3
     policies = Policy.get_all_possible_policies();
     state_value_solutions_symbolic = cell(length(policies), 1);
     expected_utility_solutions_symbolic = cell(length(policies), 1);
-    params_to_exclude = ["p_2", "p_3"]; % 評価しないパラメータ
     for i = 1:length(policies)
       policy = policies{i};
       fprintf('Policy %d: %s\n', i, policy.label);
       disp("STEP1: ベルマン方程式をシンボリックに解く");
-      state_value_solution_symbolic = EquationStateValueFunction.solve_equations_bellman_with_policy_symbolic_except_params(policy, params_to_exclude)
+      state_value_solution_symbolic = EquationStateValueFunction.solve_equations_bellman_with_policy_symbolic(policy)
       disp("STEP2: 期待効用方程式をシンボリックに解く");
-      expected_utility_solution_symbolic = EquationExpectedUtility.solve_expected_utility_with_policy_symbolic_except_params(policy, params_to_exclude)
+      expected_utility_solution_symbolic = EquationExpectedUtility.solve_expected_utility_with_policy_symbolic(policy)
       state_value_solutions_symbolic{i} = state_value_solution_symbolic;
       expected_utility_solutions_symbolic{i} = expected_utility_solution_symbolic;
     end
@@ -96,7 +95,7 @@ if calc_mode == 2 || calc_mode == 3
     end
     save('result/symbolic_data.mat', 'state_value_solutions_symbolic', 'expected_utility_solutions_symbolic');
   else
-    data = load('result/symbolic_data.mat');
+    data = load('result_g_095/symbolic_data.mat');
     state_value_solutions_symbolic = data.state_value_solutions_symbolic;
     expected_utility_solutions_symbolic = data.expected_utility_solutions_symbolic;
   end
@@ -114,8 +113,8 @@ if calc_mode == 1 || calc_mode == 3
   ResultVisualizer.display_expected_utilities_as_bar(expected_utility_solutions, is_optimal);
 end
 
-% 5. シンボリック計算結果の表示（シンボリック計算モードが選択された場合のみ）
-if calc_mode == 2 || calc_mode == 3
-  ResultVisualizer.display_max_state_value_with_policy_color_p2_p3(state_value_solutions_symbolic);
-end
+% % 5. シンボリック計算結果の表示（シンボリック計算モードが選択された場合のみ）
+% if calc_mode == 2 || calc_mode == 3
+%   ResultVisualizer.display_max_state_value_with_policy_color_p2_p3(state_value_solutions_symbolic);
+% end
 
