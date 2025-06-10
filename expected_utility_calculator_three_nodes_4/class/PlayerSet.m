@@ -317,6 +317,8 @@ classdef PlayerSet
 
     function player_matchings = get_all_possible_player_matchings(obj)
       % 指定したプレイヤ集合において、考えられる全てのマッチングを取得する
+      % \mathcal{A}(s)に相当する
+      %
       %   == assumption ==
       %   ・タクシーに割り当てられる乗客の数は最大で1人であることを前提
       %   ・空車状態でないタクシーはマッチング対象外であることを前提
@@ -360,6 +362,29 @@ classdef PlayerSet
       end
     end
 
+    function player_pairs = get_all_possible_player_pairs(obj)
+      % 指定したプレイヤ集合において、考えられる全てのプレイヤペアを取得する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   player_pairs (cell<PlayerPair>): プレイヤペアの集合
+
+      player_pairs = {};
+      player_matchings = obj.get_all_possible_player_matchings();
+      for i = 1:length(player_matchings)
+        player_matching = player_matchings{i};
+        player_pairs_ = player_matching.player_pairs;
+        for j = 1:length(player_pairs_)
+          player_pair = player_pairs_{j};
+          if ~Utils.ismember(player_pair, player_pairs)
+            player_pairs{end+1, 1} = player_pair;
+          end
+        end
+      end
+    end
+
     function state_value = get_state_value_from_solution(obj, solution)
       % プレイヤ集合の状態価値を取得する
       %
@@ -388,6 +413,68 @@ classdef PlayerSet
       player_sets = obj.get_all_possible_player_sets_after_passenger_emerged();
       selected_index = randsample(1:length(player_sets), 1, true, q);
       selected_player_set = player_sets{selected_index};
+    end
+
+    function policies = get_all_possible_policies_by_player_matching(obj, target_player_matching)
+      % 指定したプレイヤ集合objにおいて、指定したプレイヤマッチングtarget_player_matchingが組まれるようなすべての方策を取得する
+      % \mathcal{\Pi}(\mathcal{M}\mid s)に相当する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %   target_player_matching (PlayerMatching): 指定するプレイヤマッチング
+      %
+      % Returns:
+      %   policies (cell<Policy>): プレイヤマッチングが組まれるような方策の集合
+
+      all_possible_policies = Policy.get_all_possible_policies();
+      policies = {};
+      for i = 1:length(all_possible_policies)
+        policy = all_possible_policies{i};
+        player_matching = policy.get_player_matching_by_player_set(obj); % M^\pi(s)
+        if isequal(player_matching, target_player_matching)
+          policies{end+1, 1} = policy;
+        end
+      end
+    end
+      
+    function player_matchings = get_all_possible_player_matchings_by_player_pair(obj, target_player_pair)
+      % 指定したプレイヤ集合において、指定したプレイヤペアが組まれるようなすべてのプレイヤマッチングを取得する
+      % \mathcal{A}(\mu\mid s) に相当する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %   target_player_pair (PlayerPair): 指定するプレイヤペア
+      %
+      % Returns:
+      %   player_matchings (cell<PlayerMatching>): プレイヤマッチングの集合
+
+      all_possible_player_matchings = obj.get_all_possible_player_matchings(); % \mathcal{A}(s)
+      player_matchings = {};
+      for i = 1:length(all_possible_player_matchings)
+        player_matching = all_possible_player_matchings{i};
+        if player_matching.has(target_player_pair)
+          player_matchings{end+1, 1} = player_matching;
+        end
+      end
+    end
+
+    function policies = get_all_possible_policies_by_player_set_and_pair(obj, target_player_pair)
+      % 指定したプレイヤ集合において、指定したプレイヤペアtarget_player_pairが組まれるようなすべての方策を取得する
+      % \mathcal{\Pi}(\mu\mid s)に相当する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %   target_player_pair (PlayerPair): 指定するプレイヤペア
+      %
+      % Returns:
+      %   policies (cell<Policy>): プレイヤペアが組まれるような方策の集合
+
+      all_possible_player_matchings_by_player_pair = obj.get_all_possible_player_matchings_by_player_pair(target_player_pair); % \mathcal{A}(\mu\mid s)
+      policies = {};
+      for i = 1:length(all_possible_player_matchings_by_player_pair)
+        player_matching = all_possible_player_matchings_by_player_pair{i};
+        policies = [policies; obj.get_all_possible_policies_by_player_matching(player_matching)];
+      end
     end
   end
 

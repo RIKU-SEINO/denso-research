@@ -32,15 +32,12 @@ classdef ParamsHelper
       syms p_2 'real' 'positive';
       syms p_3 'real' 'positive';
       p = [0; p_2; p_3];
-      assume(0 < p_2 & p_2 <= 1);
-      assume(0 < p_3 & p_3 <= 1);
       p_ = [0, 0, 0;
             1, 0, 0;
             1, 0, 0];
 
       % 割引率
       syms 'g' 'positive';
-      assume(0 <= g & g < 1);
 
       % 一般の場合はtrans_prob_vecを使う
       % q = ParamsHelper.trans_prob_vec(p, p_);
@@ -59,7 +56,7 @@ classdef ParamsHelper
       end
 
       % タクシーの即時報酬に関するパラメータ
-      w = 2000;
+      w = 1000;
       c = 10;
       a = 100;
       u_v = ParamsHelper.utility_taxi(w, c, a);
@@ -169,6 +166,52 @@ classdef ParamsHelper
       q(4) = (1 - p(1)) * p(2)*p_(2, 1) * p(3)*p_(3, 1);
     end
 
+    function params = all_symbolic_params_with_numerical_symbolic_params()
+      % すべてのパラメータをシンボリックに取得。ただし、paramsにsym(0)やsym(1)が含まれている場合も含める
+      % 
+      % Parameters:
+      %   None
+      %
+      % Returns:
+
+      [w, c, a, ~, ~, r, b, ~, ~, p, p_, g, ~] = ParamsHelper.get_symbolic_params();
+      params = [
+        w, c, a, reshape(r.', 1, []), reshape(b.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
+      ];
+    end
+
+    function params = all_symbolic_params()
+      % すべてのパラメータをシンボリックに取得。ただし、paramsにsym(0)やsym(1)が含まれている場合も含める
+      % 
+      % Parameters:
+      %   None
+      %
+      % Returns:
+      %   params (sym[]): シンボリックなパラメータの配列
+
+      params = ParamsHelper.all_symbolic_params_with_numerical_symbolic_params();
+      is_not_numeric = arrayfun(@(x) ~isempty(symvar(x)), params);
+      params = params(is_not_numeric);
+    end
+
+    function params = all_valued_params()
+      % すべてのパラメータを数値として取得
+      % 
+      % Parameters:
+      %   None
+      %
+      % Returns:
+      %   params (double[]): 数値に変換したパラメータの配列
+
+      [w, c, a, ~, ~, r, b, ~, ~, p, p_, g, ~] = ParamsHelper.get_valued_params();
+      params = [
+        w, c, a, reshape(r.', 1, []), reshape(b.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
+      ];
+
+      is_not_numeric = arrayfun(@(x) ~isempty(symvar(x)), ParamsHelper.all_symbolic_params_with_numerical_symbolic_params());
+      params = params(is_not_numeric);
+    end
+
     function expr = evaluate_all_params(expr)
       % シンボリックな式のパラメータだけを数値的に評価する
       % 
@@ -176,15 +219,9 @@ classdef ParamsHelper
       %   expr (sym): シンボリックな式
       % Returns:
       %   expr (sym): パラメータを数値的に評価した式。変数はsymbolicのまま
-      [w, c, a, ~, ~, r, b, ~, ~, p, p_, g, ~] = ParamsHelper.get_symbolic_params();
-      [w_val, c_val, a_val, ~, ~, r_val, b_val, ~, ~, p_val, p__val, g_val, ~, ~, ~] = ParamsHelper.get_valued_params();
-      all_symbolic_params = [
-        w, c, a, reshape(r.', 1, []), reshape(b.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
-      ];
-      all_valued_params = [
-        w_val, c_val, a_val, reshape(r_val.', 1, []), reshape(b_val.', 1, []), reshape(p_val.', 1, []), reshape(p__val.', 1, []), g_val
-      ];
-      
+      all_symbolic_params = ParamsHelper.all_symbolic_params();
+      all_valued_params = ParamsHelper.all_valued_params();
+
       expr = subs(expr, all_symbolic_params, all_valued_params);
     end
 
@@ -196,14 +233,8 @@ classdef ParamsHelper
       %   params (sym): 評価しないパラメータ
       % Returns:
       %   expr (sym): 指定パラメータ以外を数値的に評価した式。変数や未評価のパラメータはsymbolicのまま
-      [w, c, a, ~, ~, r, b, ~, ~, p, p_, g, ~] = ParamsHelper.get_symbolic_params();
-      [w_val, c_val, a_val, ~, ~, r_val, b_val, ~, ~, p_val, p__val, g_val, ~, ~, ~] = ParamsHelper.get_valued_params();
-      all_symbolic_params = [
-        w, c, a, reshape(r.', 1, []), reshape(b.', 1, []), reshape(p.', 1, []), reshape(p_.', 1, []), g
-      ];
-      all_valued_params = [
-        w_val, c_val, a_val, reshape(r_val.', 1, []), reshape(b_val.', 1, []), reshape(p_val.', 1, []), reshape(p__val.', 1, []), g_val
-      ];
+      all_symbolic_params = ParamsHelper.all_symbolic_params();
+      all_valued_params = ParamsHelper.all_valued_params();
 
       % 文字列指定がある場合はシンボルに変換
       if ischar(params) || isstring(params)
@@ -230,6 +261,49 @@ classdef ParamsHelper
 
       % 指定パラメータのみを数値に置き換え
       expr = subs(expr, target_symbolic_params, target_valued_params);
+    end
+
+    function expr = params_condition()
+      [w, c, a, u_v_positive, ~, r, b, u_ps_positive, ~, p, ~, g, ~] = ParamsHelper.get_symbolic_params();
+
+      expr = symtrue;
+      % 割引率
+      expr = expr & (0 <= g & g < 1);
+      % 乗客の出現確率
+      % == Assumption ==
+      % ノード1には乗客は出現しない
+      expr = expr & (0 < p(2) & p(2) <= 1);
+      expr = expr & (0 < p(3) & p(3) <= 1);
+      % タクシーの即時報酬
+      expr = expr & (w > 0);
+      expr = expr & (c > 0);
+      expr = expr & (a > 0);
+      for i = 1:3
+        for j = 1:3
+          for k = 1:3
+            if j~= k % 乗客の出発地と目的地が同じになることはない
+              expr = expr & (u_v_positive(i, j, k) > 0);
+            end
+          end
+        end
+      end
+      % 乗客の即時報酬
+      % == Assumption ==
+      % ノード1には乗客は出現しない
+      expr = expr & (r(2) > 0);
+      expr = expr & (b(2) > 0);
+      expr = expr & (r(3) > 0);
+      expr = expr & (b(3) > 0);
+      for i = 1:3
+        for j = 1:3
+          if j == 1
+            continue; % == Assumption == ノード1には乗客は出現しない
+          end
+          expr = expr & (u_ps_positive(i, j) > 0);
+        end
+      end
+
+      expr = simplify(expr);
     end
   end
 end

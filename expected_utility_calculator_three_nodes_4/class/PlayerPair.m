@@ -247,6 +247,62 @@ classdef PlayerPair
         utilities(passenger.index()) = u_ps_negative(j);
       end
     end
+
+    function expr = bp_condition(obj, player_set, current_policy, expected_utility_solutions)
+      % プレイヤペアobjが、プレイヤ集合player_setにおいて、方策current_policyの下でBPとなる条件式を取得する
+      %
+      % Parameters:
+      %   obj (PlayerPair): プレイヤペア
+      %   player_set (cell<Player>): プレイヤ集合
+      %   current_policy (Policy): 方策
+      %   expected_utility_solutions (cell<struct>): すべての方策ごとに計算された期待効用の計算結果のセル配列。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
+      %
+      % Returns:
+      %   expr (sym): ブロッキングペアの条件式
+
+      expr = symfalse;
+
+      % 1. ペアは複数プレイヤからなる
+      if length(obj.players) <= 1
+        return;
+      end
+
+      % 2. ペアはマッチングに含まれていない
+      current_player_matching = current_policy.get_player_matching_by_player_set(player_set);
+      if current_player_matching.has(obj)
+        return;
+      end
+
+      % 3. ある別の方策pi'≠current_policyが存在し、その方策の下でのマッチングにペアが含まれており、かつペアに含まれるすべてのプレイヤにとってpi'の方が期待効用が高い
+      current_policy_index = current_policy.index();
+      all_possible_policies = Policy.get_all_possible_policies();
+      for i = 1:length(all_possible_policies)
+        other_policy = all_possible_policies{i};
+        if isequal(other_policy, current_policy) % 同じ方策はスキップ
+          continue;
+        end
+
+        other_player_matching = other_policy.get_player_matching_by_player_set(player_set);
+        if ~other_player_matching.has(obj) % ペアがマッチングに含まれていないならその方策はスキップ
+          continue;
+        end
+
+        other_policy_index = other_policy.index();
+
+        expr_ = symtrue;
+        for j = 1:length(obj.players)
+          player = obj.players{j};
+          expected_utility_under_current_policy = VariablesHelper.get_solution_expected_utility(player_set, player, expected_utility_solutions{current_policy_index}); % 期待効用の計算結果のセル配列の順番は、Policy.get_all_possible_policies()の順番と一致するので、current_policy_indexを指定する
+          expected_utility_under_other_policy = VariablesHelper.get_solution_expected_utility(player_set, player, expected_utility_solutions{other_policy_index}); % 期待効用の計算結果のセル配列の順番は、Policy.get_all_possible_policies()の順番と一致するので、other_policy_indexを指定する
+          other_policy_is_better_than_current_policy = expected_utility_under_current_policy < expected_utility_under_other_policy;
+          expr_ = and(expr_, other_policy_is_better_than_current_policy);
+        end
+        % if expr_ == symtrue
+        %   fprintf('player_set: %s\ncurrent_policy: %d < other_policy: %d\n\n', player_set.label(), current_policy.index(), other_policy.index());
+        % end
+        expr = or(expr, expr_);
+      end
+    end
   end
 
   % static methods
