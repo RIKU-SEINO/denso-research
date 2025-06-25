@@ -190,41 +190,55 @@ classdef PlayerMatching
       end
     end
 
-    function utilities = get_utilities(obj, mode)
-      % マッチングを組んだ時の即時効用を取得する
+    function utilities = get_utilities_with_incentive(obj, policy, mode)
+      % マッチングを組んだ時の即時効用を全てのプレイヤについて取得する。
+      % ただし、指定したマッチングobjが、方策policyに従ったものであれば、インセンティブを付与する
       %
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   policy (Policy): 方策
       %   mode (char): 'symbolic' または 'numeric' を指定する。
       %
       % Returns:
-      %   utilities (cell<sym|double>): マッチングのユーティリティを格納するセル配列
+      %   utilities (cell<sym|double>): マッチングの即時効用を格納するセル配列
 
       all_possible_players = Player.get_all_possible_players();
       utilities = sym(zeros(length(all_possible_players), 1));
 
+      player_set = obj.get_player_set_before_matching();
+
       for i = 1:length(obj.player_pairs)
         player_pair = obj.player_pairs{i};
         utilities = utilities + player_pair.get_utilities(mode);
+        if policy.has(obj) % 方策に従ったマッチングであれば、インセンティブを付与する
+          players_in_player_pair = player_pair.players;
+          for j = 1:length(players_in_player_pair)
+            player = players_in_player_pair{j};
+            if ParamsHelper.should_create_incentive(player_set, player) % 
+              utilities(player.index()) = utilities(player.index()) + ParamsHelper.get_incentive(player_set, player);
+            end
+          end
+        end
       end
     end
 
-    function utility = get_utility_of_player(obj, player, mode)
-      % 指定したプレイヤの即時効用を取得する
+    function utility = get_utility_of_player_with_incentive(obj, player, policy, mode)
+      % 指定したプレイヤの即時効用を取得する。ただし、指定したマッチングobjが、方策policyに従ったものであれば、インセンティブを付与する。
       %
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
       %   player (Player): プレイヤ
+      %   policy (Policy): 方策
       %   mode (char): 'symbolic' または 'numeric' を指定する。
       %
       % Returns:
       %   utility (sym|double): プレイヤのユーティリティ
 
-      utilities = obj.get_utilities(mode);
+      utilities = obj.get_utilities_with_incentive(policy, mode);
       utility = utilities(player.index());
     end
 
-    function utility = get_utility_sum(obj, mode)
+    function utility = get_utility_sum_with_incentive(obj, policy, mode)
       % マッチングを組んだ時の即時効用の合計を取得する(=R)
       %
       % Parameters:
@@ -234,15 +248,17 @@ classdef PlayerMatching
       % Returns:
       %   utility (sym|double): マッチングのユーティリティの合計
 
-      utilities = obj.get_utilities(mode);
+      utilities = obj.get_utilities_with_incentive(policy, mode);
       utility = sum(utilities);
     end
 
-    function action_value = get_action_value(obj)
-      % マッチングを組んだ時の行動価値（＝即時報酬の和＋遷移後の状態価値）を取得する
+    function action_value = get_action_value_with_incentive(obj, policy)
+      % マッチングを組んだ時の行動価値（＝即時報酬の和＋遷移後の状態価値）を取得する。
+      % ただし、指定したマッチングobjが、方策policyに従ったものであれば、インセンティブを付与する。
       %
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   policy (Policy): 方策
       %
       % Returns:
       %   action_value (sym): マッチングの行動価値
@@ -251,7 +267,7 @@ classdef PlayerMatching
       player_set = obj.get_player_set_after_matching();
       player_sets_after_transition = player_set.get_all_possible_player_sets_after_transition();
 
-      action_value = obj.get_utility_sum('symbolic');
+      action_value = obj.get_utility_sum_with_incentive(policy, 'symbolic');
       for i = 1:length(player_sets_after_transition)
         player_set_after_transition = player_sets_after_transition{i};
         state_value_after = VariablesHelper.get_state_value(player_set_after_transition);
@@ -259,12 +275,14 @@ classdef PlayerMatching
       end
     end
 
-    function action_value_of_player = get_action_value_of_player(obj, player)
-      % マッチングを組んだ時の指定したプレイヤの行動価値（＝プレイヤの即時報酬＋遷移後のプレイヤの期待効用）を取得する
+    function action_value_of_player = get_action_value_of_player_with_incentive(obj, player, policy)
+      % マッチングを組んだ時の指定したプレイヤの行動価値（＝プレイヤの即時報酬＋遷移後のプレイヤの期待効用）を取得する。
+      % ただし、指定したマッチングobjが、方策policyに従ったものであれば、インセンティブを付与する。
       %
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
       %   player (Player): プレイヤ
+      %   policy (Policy): 方策
       %
       % Returns:
       %   action_value_of_player (sym): プレイヤの行動価値
@@ -272,7 +290,7 @@ classdef PlayerMatching
       [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, g, q] = ParamsHelper.get_symbolic_params();
 
       if obj.get_player_set_before_matching().has(player)
-        action_value_of_player = obj.get_utility_of_player(player, 'symbolic');
+        action_value_of_player = obj.get_utility_of_player_with_incentive(player, policy, 'symbolic');
       else
         action_value_of_player = sym(0); % マッチ前のプレイヤ集合に含まれないプレイヤは、行動価値が0
         return;
@@ -308,36 +326,44 @@ classdef PlayerMatching
       player_matchings = player_set.get_all_possible_player_matchings();
     end
 
-    function player_matchings = get_not_optimaL_player_matchings(obj)
-      % 最適でないプレイヤマッチングの集合を取得する
+    function player_matchings = get_all_possible_player_matchings_except_obj(obj)
+      % マッチングobjが組まれるようなプレイヤ集合について、
+      % マッチングobj以外のプレイヤマッチングの集合を取得する
       %
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
       %
       % Returns:
-      %   player_matchings (cell<PlayerMatching>): 最適でないプレイヤマッチングの集合を格納するセル配列
+      %   player_matchings (cell<PlayerMatching>): マッチングobj以外のプレイヤマッチングの集合を格納するセル配列
 
       all_possible_player_matchings = obj.get_all_possible_player_matchings();
       player_matchings = Utils.obj_setdiff(all_possible_player_matchings, {obj});
     end
 
-    function expr = optimality_condition(obj)
-      % 指定したプレイヤマッチングが最適である場合の条件式を取得する
+    function expr = optimality_condition(obj, current_policy, state_value_solutions)
+      % 指定したプレイヤマッチングが方策current_policyに従った場合に最適である場合の条件式を取得する
       %
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   current_policy (Policy): 現在の方策
+      %   state_value_solutions (cell<struct>): すべての方策ごとに計算された状態価値の計算結果のセル配列。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
       %
       % Returns:
       %   expr (sym): プレイヤマッチングのシンボリック条件式
 
-      not_optimal_player_matchings = obj.get_not_optimaL_player_matchings();
+      other_player_matchings = obj.get_all_possible_player_matchings_except_obj();
       expr = symtrue;
-      for i = 1:length(not_optimal_player_matchings)
-        not_optimal_action_value = not_optimal_player_matchings{i}.get_action_value();
-        optimal_action_value = obj.get_action_value();
+      solution = state_value_solutions{current_policy.index()};
+      for i = 1:length(other_player_matchings)
+        other_player_matching = other_player_matchings{i};
+        other_action_value = other_player_matching.get_action_value_with_incentive(current_policy);
+        action_value = obj.get_action_value_with_incentive(current_policy);
 
-        expr = expr & (not_optimal_action_value <= optimal_action_value);
+        expr = expr & (other_action_value <= action_value);
       end
+
+      expr = ParamsHelper.evaluate_all_params(expr);
+      expr = subs(expr, fieldnames(solution), struct2cell(solution));
     end
 
     function expr = bp_stability_condition(obj, current_policy, expected_utility_solutions)
@@ -415,27 +441,6 @@ classdef PlayerMatching
       all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
       [~, sorted_indices] = sort(cellfun(@(x) find(Utils.ismember(x, all_possible_player_sets)), player_sets));
       player_matchings = player_matchings(sorted_indices);
-    end
-
-    function expr = max_action_value_as_piecewise(player_matchings)
-      % プレイヤマッチングの集合における最大の行動価値をpiecewiseで表現する
-      %
-      % Parameters:
-      %   player_matchings (cell<PlayerMatching>): プレイヤマッチングの集合を格納するセル配列
-      %
-      % Returns:
-      %   expr (sym): プレイヤマッチングの集合における最大の行動価値を表すシンボリック式
-      action_values = cellfun(@(x) x.get_action_value(), player_matchings, 'UniformOutput', false);
-      action_values = [action_values{:}];
-
-      piecewise_args = {};
-      for i = 1:length(player_matchings)
-        player_matching = player_matchings{i};
-        action_value = action_values(i);
-        piecewise_args = [piecewise_args, {player_matching.optimality_condition(), action_value}];
-      end
-
-      expr = piecewise(piecewise_args{:});
     end
   end
 end

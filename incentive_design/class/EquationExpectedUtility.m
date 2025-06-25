@@ -48,7 +48,7 @@ classdef EquationExpectedUtility
 
       % 2. ベルマン方程式右辺の構築
       player_matching = policy.get_player_matching_by_player_set(obj.player_set);
-      right = player_matching.get_action_value_of_player(obj.player);
+      right = player_matching.get_action_value_of_player_with_incentive(obj.player, policy);
 
       % 期待効用方程式の右辺と左辺の差を計算
       diff = left - right;
@@ -122,39 +122,6 @@ classdef EquationExpectedUtility
     %   all_vars = symvar(x);
     %   [A, B] = equationsToMatrix(equations, all_vars);
     % end
-
-    function solution = solve_expected_utility_with_policy_numeric(policy)
-      % Policyに基づいて、すべてのプレイヤ集合、プレイヤにおける期待効用方程式を数値的に解く
-      %
-      % Parameters:
-      %   policy (Policy): 方策
-      %
-      % Returns:
-      %   solution (struct): 期待効用方程式の数値的な解を格納する構造体
-      %     - 各フィールドは x に含まれる期待効用変数の名前(string)
-      %     - 各フィールドの値は 数値的な解(double)
-
-      diffs = EquationExpectedUtility.build_diffs_expected_utility_with_policy(policy);
-      x = VariablesHelper.init_expected_utilities();
-
-      % 1. 期待効用方程式の右辺と左辺の差のシンボリック式に含まれるパラメータを数値に置き換える
-      diffs_evaluated = ParamsHelper.evaluate_all_params(diffs);
-      % 2. 期待効用方程式の右辺と左辺の差のシンボリック式に含まれる期待効用変数を数値に置き換える
-      xt = x.';
-      matlabFunction(diffs_evaluated, 'Vars', {xt(:)}, 'File', 'func/diffs_expected_utility_with_policy');
-      options = optimoptions('fsolve', 'Display', 'iter');
-      [~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, x_init] = ParamsHelper.get_valued_params();
-      solution_array = fsolve(@diffs_expected_utility_with_policy, x_init.', options);
-      solution = struct();
-      index = 1;
-      for i = 1:size(x, 1)
-        for j = 1:size(x, 2)
-          varname = char(x(i, j));
-          solution.(varname) = solution_array(index);
-          index = index + 1;
-        end
-      end
-    end
 
     function solution = solve_expected_utility_with_policy_symbolic(policy)
       % Policyに基づいて、すべてのプレイヤ集合、プレイヤにおける期待効用方程式をシンボリックに解く

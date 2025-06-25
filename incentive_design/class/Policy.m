@@ -110,17 +110,12 @@ classdef Policy
       end
     end
 
-    function expr = optimality_condition(obj)
+    function expr = optimality_condition(obj, state_value_solutions)
       expr = symtrue;
       for i = 1:length(obj.player_matchings)
         player_matching = obj.player_matchings{i};
-        expr = expr & player_matching.optimality_condition();
+        expr = expr & player_matching.optimality_condition(obj, state_value_solutions);
       end
-    end
-
-    function expr = optimality_condition_evaluated(obj)
-      expr = obj.optimality_condition();
-      expr = ParamsHelper.evaluate_all_params(expr);
     end
 
     function player_matching = get_player_matching_by_player_set(obj, player_set)

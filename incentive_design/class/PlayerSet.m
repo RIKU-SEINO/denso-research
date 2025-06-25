@@ -362,6 +362,19 @@ classdef PlayerSet
       end
     end
 
+    function result = has_multiple_possible_player_matchings(obj)
+      % 指定したプレイヤ集合において、考えられる全てのプレイヤマッチングが複数あるか判定する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   result (logical): 考えられる全てのプレイヤマッチングが複数ある場合は true, そうでない場合は false
+
+      player_matchings = obj.get_all_possible_player_matchings();
+      result = length(player_matchings) > 1;
+    end
+
     function player_pairs = get_all_possible_player_pairs(obj)
       % 指定したプレイヤ集合において、考えられる全てのプレイヤペアを取得する
       %
