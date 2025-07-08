@@ -65,6 +65,18 @@ classdef ParamsHelper
       incentives = incentives(is_not_zero);
     end
 
+    function num = get_num_of_incentives()
+      % インセンティブの数を取得
+      %
+      % Parameters:
+      %   None
+      %
+      % Returns:
+      %   num (int): インセンティブの数
+
+      num = length(ParamsHelper.get_all_incentives_as_vector());
+    end
+
     function incentive = get_incentive(player_set, player)
       % プレイヤ集合において、方策に従った時にプレイヤに付与するインセンティブを取得する
       %
