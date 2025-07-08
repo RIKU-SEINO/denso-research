@@ -20,6 +20,14 @@ classdef Utils
     end
     
     function diff_objs = obj_setdiff(objs1, objs2)
+      % objs1からobjs2を引いた差集合を返す
+      % 
+      % Parameters:
+      %   objs1 (cell): 引かれる集合
+      %   objs2 (cell): 引く集合
+      %
+      % Returns:
+      %   diff_objs (cell): 差集合
       diff_objs = {};
       for i = 1:length(objs1)
         obj1 = objs1{i};
