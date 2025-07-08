@@ -248,8 +248,8 @@ classdef PlayerPair
       end
     end
 
-    function expr = bp_condition(obj, player_set, current_policy, expected_utility_solutions)
-      % プレイヤペアobjが、プレイヤ集合player_setにおいて、方策current_policyの下でBPとなる条件式を取得する
+    function expr = non_bp_condition(obj, player_set, current_policy, expected_utility_solutions)
+      % プレイヤペアobjが、プレイヤ集合player_setにおいて、方策current_policyの下でBPとならない条件式を取得する
       %
       % Parameters:
       %   obj (PlayerPair): プレイヤペア
@@ -260,20 +260,23 @@ classdef PlayerPair
       % Returns:
       %   expr (sym): ブロッキングペアの条件式
 
-      expr = symfalse;
+      expr = symtrue;
 
-      % 1. ペアは複数プレイヤからなる
+      % 1. 検査対象のペアに含まれるプレイヤの数が1以下の場合は、検査対象のペアobjは必ずnon-BPである
       if length(obj.players) <= 1
         return;
       end
 
-      % 2. ペアはマッチングに含まれていない
+      % 2. 検査対象のペアが現在のマッチングに含まれている場合は、検査対象のペアobjは必ずnon-BPである
       current_player_matching = current_policy.get_player_matching_by_player_set(player_set);
       if current_player_matching.has(obj)
         return;
       end
 
-      % 3. ある別の方策pi'≠current_policyが存在し、その方策の下でのマッチングにペアが含まれており、かつペアに含まれるすべてのプレイヤにとってpi'の方が期待効用が高い
+      % 3. ある方策pi'≠current_policyを考える。
+      %   a.その方策の下でのマッチングに検査対象のペアobjが含まれており、
+      %   b.かつ検査対象のペアobjに含まれるすべてのプレイヤにとってpi'の方が期待効用が高い
+      % この両方を満たす方策pi'が存在しない場合、検査対象のペアobjはnon-BPである
       current_policy_index = current_policy.index();
       all_possible_policies = Policy.get_all_possible_policies();
       for i = 1:length(all_possible_policies)
@@ -283,24 +286,32 @@ classdef PlayerPair
         end
 
         other_player_matching = other_policy.get_player_matching_by_player_set(player_set);
-        if ~other_player_matching.has(obj) % ペアがマッチングに含まれていないならその方策はスキップ
+        if ~other_player_matching.has(obj) % 検査対象のペアobjがother_policyの下でのマッチングに含まれていないなら、aを満たさないのでother_policyはスキップ
           continue;
         end
 
+        % ここまで来ると、検査対象のペアobjは、player_setにおいて、
+        % current_policyの下では組まれない（2.）のに対して、other_policyの下では組まれることになる。
+        % つまり、検査対象のペアobjは、player_setにおいて、other_policyの下でBPとなる可能性がある。
+
         other_policy_index = other_policy.index();
 
-        expr_ = symtrue;
+        expr_ = symfalse;
         for j = 1:length(obj.players)
           player = obj.players{j};
-          expected_utility_under_current_policy = VariablesHelper.get_solution_expected_utility(player_set, player, expected_utility_solutions{current_policy_index}); % 期待効用の計算結果のセル配列の順番は、Policy.get_all_possible_policies()の順番と一致するので、current_policy_indexを指定する
-          expected_utility_under_other_policy = VariablesHelper.get_solution_expected_utility(player_set, player, expected_utility_solutions{other_policy_index}); % 期待効用の計算結果のセル配列の順番は、Policy.get_all_possible_policies()の順番と一致するので、other_policy_indexを指定する
-          other_policy_is_better_than_current_policy = expected_utility_under_current_policy < expected_utility_under_other_policy;
-          expr_ = and(expr_, other_policy_is_better_than_current_policy);
+          expected_utility_under_current_policy = VariablesHelper.get_solution_expected_utility( ...
+            player_set, ...
+            player, ...
+            expected_utility_solutions{current_policy_index} ...
+          ); % 期待効用の計算結果のセル配列の順番は、Policy.get_all_possible_policies()の順番と一致するので、current_policy_indexを指定する
+          expected_utility_under_other_policy = VariablesHelper.get_solution_expected_utility( ...
+            player_set, ...
+            player, ...
+            expected_utility_solutions{other_policy_index} ...
+          ); % 期待効用の計算結果のセル配列の順番は、Policy.get_all_possible_policies()の順番と一致するので、other_policy_indexを指定する
+          expr_ = or(expr_, expected_utility_under_other_policy <= expected_utility_under_current_policy); % 現行の方策pi'の方が好ましいプレイヤが一人でもいれば良いのでorで繋ぐ
         end
-        % if expr_ == symtrue
-        %   fprintf('player_set: %s\ncurrent_policy: %d < other_policy: %d\n\n', player_set.label(), current_policy.index(), other_policy.index());
-        % end
-        expr = or(expr, expr_);
+        expr = and(expr, expr_); % 全ての方策についてexpr_がtrueである必要があるので、andで繋ぐ
       end
     end
   end

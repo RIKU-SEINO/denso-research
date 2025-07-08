@@ -386,8 +386,8 @@ classdef PlayerMatching
           continue;
         end
 
-        bp_condition_expr = player_pair.bp_condition(player_set, current_policy, expected_utility_solutions);
-        expr = and(expr, not(bp_condition_expr));
+        non_bp_condition_expr = player_pair.non_bp_condition(player_set, current_policy, expected_utility_solutions);
+        expr = and(expr, non_bp_condition_expr);
       end
     end
   end
