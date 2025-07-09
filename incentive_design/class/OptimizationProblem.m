@@ -22,10 +22,12 @@ classdef OptimizationProblem
       %   objective_function (sym): 目的関数
       %   is_minimization (logical): 最小化問題かどうか
       %   eq_constraint (sym | 'none'): 等式制約条件
-      %     複数の等式制約は、ANDで繋いで渡すこと。OR条件はサポートしていない
+      %     複数の等式制約は、ANDで繋いで渡すこと。OR条件はサポートしていないため、
+      %     あらかじめOR条件はMathUtils.expand_or_optimizedにより展開しておくこと。
       %     また、eq_constraintが'none'の場合、eq_constraintは空として扱う
       %   ineq_constraint (sym | 'none'): 不等式制約条件
-      %     複数の不等式制約は、ANDで繋いで渡すこと。OR条件はサポートしていない
+      %     複数の不等式制約は、ANDで繋いで渡すこと。OR条件はサポートしていないため、
+      %     あらかじめOR条件はMathUtils.expand_or_optimizedにより展開しておくこと。
       %     また、ineq_constraintが'none'の場合、ineq_constraintは空として扱う
       %
       % Returns:
@@ -114,7 +116,7 @@ classdef OptimizationProblem
       end
 
       [A_fun, b_fun] = equationsToMatrix(f, obj.variables);
-      b_fun = double(b_fun);
+      b_fun = -double(b_fun); % equationsToMatrixは、Ax=bの形に変換してしまうため、Ax+bの形で得たい場合はbを-1倍する
       A_fun = double(A_fun);
     end
 
@@ -237,7 +239,18 @@ classdef OptimizationProblem
         options ... % オプション
       );
 
-      result = struct('x', x, 'fval', fval+b_fun, 'exitflag', exitflag, 'output', output);
+      if obj.is_minimization
+        fval = fval+b_fun;
+      else
+        fval = -fval-b_fun;
+      end
+
+      result = struct( ...
+        'x', x, ...
+        'fval', fval, ...
+        'exitflag', exitflag, ...
+        'output', output ...
+      );
     end
   end
 
@@ -281,6 +294,85 @@ classdef OptimizationProblem
       if contains(char(obj.ineq_constraint), '|')
         error('ineq_constraint must not contain OR conditions');
       end
+    end
+  end
+
+  methods (Static)
+    function result = execute_linprog_all(objs)
+      % 最適化問題のリストを受け取り、それぞれの最適化問題を実行し、どの最適化問題の結果が一番最適なのかを返す
+      % OptimizationProblem.execute_linprog()は、ORを含む制約条件を持つ最適化問題を実行できないが、
+      % MathUtils.expand_or_optimized()でOR条件を展開し、
+      % 得られた複数の制約条件それぞれについて、OptimizationProblem.execute_linprog()を実行し、
+      % その結果を比較することで、OR条件を含む制約条件を持つ最適化問題を実行できる。
+      %
+      % Parameters:
+      %   objs (OptimizationProblem[]): 最適化問題のリスト
+      %
+      % Returns:
+      %   result (OptimizationProblem): 最適化問題の結果
+
+      % objsの全てについて、eq_constraintとineq_constraint以外のプロパティが同じであるかをチェックする
+      for i = 1:length(objs)
+        if ~isequal(objs{i}.variables, objs{1}.variables)
+          error('Property "variables" must be the same for all OptimizationProblem instances');
+        end
+        if ~isequal(objs{i}.objective_function, objs{1}.objective_function)
+          error('Property "objective_function" must be the same for all OptimizationProblem instances');
+        end
+        if ~isequal(objs{i}.is_minimization, objs{1}.is_minimization)
+          error('Property "is_minimization" must be the same for all OptimizationProblem instances');
+        end
+      end
+
+      results = {};
+      for i = 1:length(objs)
+        tmp_result = objs{i}.execute_linprog();
+        if ~isempty(tmp_result.fval)
+          results{end+1} = tmp_result;
+        end
+      end
+      if isempty(results)
+        result = struct('x', [], 'fval', [], 'exitflag', [], 'output', []);
+        return;
+      end
+
+      if objs{1}.is_minimization
+        [~, idx] = min(cellfun(@(x) x.fval, results));
+      else
+        [~, idx] = max(cellfun(@(x) x.fval, results));
+      end
+      result = results{idx};
+    end
+
+    function show_result(variables, result)
+      % 最適化問題の実行結果を表示する
+      %
+      % Parameters:
+      %   result (OptimizationProblem): 最適化問題の実行結果
+      %
+      % Returns:
+      %   None
+
+      fprintf('\n==== 最適化問題の実行結果 ====\n');
+      if isempty(result.fval)
+        fprintf('最適化問題の実行に失敗しました\n');
+      else
+        fprintf('最適化問題の実行に成功しました\n');
+      end
+      fprintf('目的関数値: %f\n', result.fval);
+      fprintf('最適解:\n');
+      for i = 1:length(result.x)
+        varname = char(variables(i));
+        fprintf('  %s = %f\n', varname, result.x(i));
+      end
+      fprintf('終了フラグ: %d\n', result.exitflag);
+      if isfield(result.output, 'iterations')
+        fprintf('反復回数: %d\n', result.output.iterations);
+      end
+      if isfield(result.output, 'message')
+        fprintf('メッセージ: %s\n', result.output.message);
+      end
+      fprintf('=============================\n\n');
     end
   end
 end
