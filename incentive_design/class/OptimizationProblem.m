@@ -136,11 +136,8 @@ classdef OptimizationProblem
         return;
       end
 
-      if contains(char(obj.eq_constraint), '&')
-        constraints = children(obj.eq_constraint);
-      else
-        constraints = {obj.eq_constraint};
-      end
+      % AND条件を分割
+      constraints = MathUtils.get_children(obj.eq_constraint, '&');
 
       [A, b] = equationsToMatrix(constraints, obj.variables);
       A = double(A);
@@ -163,11 +160,8 @@ classdef OptimizationProblem
         return;
       end
 
-      if contains(char(obj.ineq_constraint), '&')
-        constraints = children(obj.ineq_constraint);
-      else
-        constraints = {obj.ineq_constraint};
-      end
+      % AND条件を分割
+      constraints = MathUtils.get_children(obj.ineq_constraint, '&');
 
       % 各constraintを、lhs-rhsの形式に変換する
       constraints = cellfun(@(c) lhs(c) - rhs(c) == 0, constraints, 'UniformOutput', false);
@@ -306,7 +300,7 @@ classdef OptimizationProblem
       % その結果を比較することで、OR条件を含む制約条件を持つ最適化問題を実行できる。
       %
       % Parameters:
-      %   objs (OptimizationProblem[]): 最適化問題のリスト
+      %   objs (cell<OptimizationProblem>): 最適化問題のセル配列
       %
       % Returns:
       %   result (OptimizationProblem): 最適化問題の結果
