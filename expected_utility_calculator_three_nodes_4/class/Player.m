@@ -109,6 +109,22 @@ classdef Player
       end
     end
 
+    function label_tex = label_tex(obj)
+      % プレイヤーのラベルをtex形式で返す
+      %
+      % Parameters:
+      %   obj (Player): Player オブジェクト
+      %
+      % Returns:
+      %   label_tex (char): プレイヤーのラベル表記
+
+      if obj.type == "v"
+        label_tex = sprintf('v_{%d}(%d)', obj.node, obj.steps_to_vacant);
+      else
+        label_tex = sprintf('ps_{%d,%d}', obj.node, obj.destination_node);
+      end
+    end
+
     function index = index(obj)
       % all_possible_playersの中でのindexを返す
       % 
@@ -302,6 +318,21 @@ classdef Player
       labels = cell(length(players), 1);
       for i = 1:length(players)
         labels{i} = players{i}.label();
+      end
+    end
+
+    function labels_tex = labels_tex(players)
+      % プレイヤーのラベルをtex形式で返す
+      %
+      % Parameters:
+      %   players （cell<Player>）: プレイヤーの集合
+      %
+      % Returns:
+      %   labels_tex （cell<char>）: プレイヤーのラベル表記
+
+      labels_tex = cell(length(players), 1);
+      for i = 1:length(players)
+        labels_tex{i} = players{i}.label_tex();
       end
     end
 

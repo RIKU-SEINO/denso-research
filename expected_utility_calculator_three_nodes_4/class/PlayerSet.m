@@ -100,6 +100,33 @@ classdef PlayerSet
       label = strcat('{', label, '}');
     end
 
+    function label_tex = label_tex(obj)
+      % プレイヤーの集合のラベルをtex形式で取得する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   label_tex (char): プレイヤーの集合のラベルのtex形式
+
+      labels_tex = Player.labels_tex(obj.players);
+      label_tex = char(strjoin(labels_tex, ', '));
+      label_tex = strcat('{', label_tex, '}');
+    end
+
+    function simplified_label_tex = simplified_label_tex(obj)
+      % プレイヤーの集合のラベルをtex形式で取得する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   simplified_label_tex (char): プレイヤーの集合のラベルのtex形式
+      %    s_1, s_2, s_3 のように、s+indexを返す
+
+      simplified_label_tex = sprintf('s_{%d}', obj.index());
+    end
+
     function index = index(obj)
       % プレイヤーの集合のインデックスを取得する
       %
@@ -407,7 +434,37 @@ classdef PlayerSet
         labels{i} = player_sets{i}.label();
       end
     end
-    
+
+    function labels_tex = labels_tex(player_sets)
+      % プレイヤ集合のラベル一覧をtex形式で取得する
+      %
+      % Parameters:
+      %   player_sets (cell<PlayerSet>): プレイヤ集合の配列
+      %
+      % Returns:
+      %   labels_tex (cell<char>): プレイヤ集合のラベルのtex形式の配列
+
+      labels_tex = cell(length(player_sets), 1);
+      for i = 1:length(player_sets)
+        labels_tex{i} = player_sets{i}.label_tex();
+      end
+    end
+
+    function simplified_labels_tex = simplified_labels_tex(player_sets)
+      % プレイヤ集合のラベル一覧をtex形式で取得する
+      %
+      % Parameters:
+      %   player_sets (cell<PlayerSet>): プレイヤ集合の配列
+      %
+      % Returns:
+      %   simplified_labels_tex (cell<char>): プレイヤ集合のラベルのtex形式の配列
+
+      simplified_labels_tex = cell(length(player_sets), 1);
+      for i = 1:length(player_sets)
+        simplified_labels_tex{i} = player_sets{i}.simplified_label_tex();
+      end
+    end
+
     function all_taxi_sets = get_all_taxis_sets()
       % 全てのタクシーの集合を取得する
       %
