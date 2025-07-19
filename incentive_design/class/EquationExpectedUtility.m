@@ -143,6 +143,8 @@ classdef EquationExpectedUtility
         varname = char(all_vars(i));
         solution.(varname) = collect(solution.(varname), [w, c, a, r(2), r(3), b(2), b(3)]);
       end
+
+      solution = ExpectedUtilitySolution(solution);
     end
 
 
@@ -164,6 +166,8 @@ classdef EquationExpectedUtility
       all_vars = symvar(x);
       equations_evaluated = ParamsHelper.evaluate_except_params(equations, params_to_exclude);
       solution = solve(equations_evaluated, all_vars);
+
+      solution = ExpectedUtilitySolution(solution);
     end
   end
 end

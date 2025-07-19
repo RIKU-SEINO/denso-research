@@ -89,43 +89,22 @@ classdef VariablesHelper
       % Parameters:
       %   player_set (PlayerSet): プレイヤセット
       %   player (Player): プレイヤ
-      %   solution (struct): 解
+      %   solution (ExpectedUtilitySolution): 解
       % Returns:
       %   expected_utility (symbolic | numeric): プレイヤセットとプレイヤに対する期待効用の解
 
-      expected_utility = VariablesHelper.get_expected_utility(player_set, player);
-      key = char(expected_utility);
-      expected_utility = solution.(key);
-    end
+      key = char(VariablesHelper.get_expected_utility(player_set, player));
+      expected_utility = [];
+      for i = 1:length(solution.variables)
+        if strcmp(solution.variables{i}, key)
+          expected_utility = solution.values{i};
+          break;
+        end
+      end
 
-    function sorted_state_values_solution = sort_state_values_solution(state_values_solution)
-      % 状態価値の解をソートして返す
-      %
-      % Parameters:
-      %   state_values_solution (struct): 状態価値の解
-      %
-      % Returns:
-      %   sorted_state_values_solution (struct): ソートされた状態価値の解
-
-      V = VariablesHelper.init_state_values();
-      key_order = arrayfun(@char, V, 'UniformOutput', false);
-
-      sorted_state_values_solution = Utils.sort_struct_by_keys(state_values_solution, key_order);
-    end
-
-    function sorted_expected_utilities_solution = sort_expected_utilities_solution(expected_utilities_solution)
-      % 期待効用の解をソートして返す
-      %
-      % Parameters:
-      %   expected_utilities_solution (struct): 期待効用の解
-      %
-      % Returns:
-      %   sorted_expected_utilities_solution (struct): ソートされた期待効用の解
-
-      x = VariablesHelper.init_expected_utilities();
-      key_order = arrayfun(@char, x, 'UniformOutput', false);
-
-      sorted_expected_utilities_solution = Utils.sort_struct_by_keys(expected_utilities_solution, key_order);
+      if isempty(expected_utility)
+        error('solutionから変数名%sの期待効用を取得できませんでした', key);
+      end
     end
   end
 end

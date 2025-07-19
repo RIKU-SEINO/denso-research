@@ -255,7 +255,7 @@ classdef PlayerPair
       %   obj (PlayerPair): プレイヤペア
       %   player_set (cell<Player>): プレイヤ集合
       %   current_policy (Policy): 方策
-      %   expected_utility_solutions (cell<struct>): すべての方策ごとに計算された期待効用の計算結果のセル配列。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
+      %   expected_utility_solutions (cell<ExpectedUtilitySolution>): すべての方策ごとに計算された期待効用の計算結果。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
       %
       % Returns:
       %   expr (sym): ブロッキングペアの条件式

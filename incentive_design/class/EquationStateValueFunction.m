@@ -99,6 +99,8 @@ classdef EquationStateValueFunction
         varname = char(all_vars(i));
         solution.(varname) = collect(solution.(varname), [w, c, a, r(2), r(3), b(2), b(3)]);
       end
+
+      solution = StateValueSolution(solution);
     end
 
     function solution = solve_equations_bellman_with_policy_symbolic_except_params(policy, params_to_exclude)
@@ -119,6 +121,7 @@ classdef EquationStateValueFunction
       all_vars = symvar(V);
       equations_evaluated = ParamsHelper.evaluate_except_params(equations, params_to_exclude);
       solution = solve(equations_evaluated, all_vars);
+      solution = StateValueSolution(solution);
     end
   end
 end

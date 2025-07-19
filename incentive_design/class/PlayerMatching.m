@@ -346,7 +346,7 @@ classdef PlayerMatching
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
       %   current_policy (Policy): 現在の方策
-      %   state_value_solutions (cell<struct>): すべての方策ごとに計算された状態価値の計算結果のセル配列。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
+      %   state_value_solutions (cell<StateValueSolution>): すべての方策ごとに計算された状態価値の計算結果。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
       %
       % Returns:
       %   expr (sym): プレイヤマッチングのシンボリック条件式
@@ -363,7 +363,7 @@ classdef PlayerMatching
       end
 
       expr = ParamsHelper.evaluate_all_params(expr);
-      expr = subs(expr, fieldnames(solution), struct2cell(solution));
+      expr = subs(expr, solution.variables, solution.values);
     end
 
     function expr = bp_stability_condition(obj, current_policy, expected_utility_solutions)
@@ -372,7 +372,7 @@ classdef PlayerMatching
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
       %   current_policy (Policy): 現在の方策
-      %   expected_utility_solutions (cell<struct>): すべての方策ごとに計算された期待効用の計算結果のセル配列。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
+      %   expected_utility_solutions (cell<ExpectedUtilitySolution>): すべての方策ごとに計算された期待効用の計算結果。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
       %
       % Returns:
       %   expr (sym): 指定したマッチングobjが方策current_policyの下でBP安定であるための条件式
@@ -386,7 +386,11 @@ classdef PlayerMatching
           continue;
         end
 
-        non_bp_condition_expr = player_pair.non_bp_condition(player_set, current_policy, expected_utility_solutions);
+        non_bp_condition_expr = player_pair.non_bp_condition( ...
+          player_set, ...
+          current_policy, ...
+          expected_utility_solutions ...
+        );
         expr = and(expr, non_bp_condition_expr);
       end
     end
