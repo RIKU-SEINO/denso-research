@@ -18,9 +18,9 @@ if data_regenerate_symbolic == 'y'
     policy = policies{i};
     fprintf('Policy %d: %s\n', i, policy.label);
     disp("STEP1: ベルマン方程式を解く");
-    state_value_solution_symbolic = EquationStateValueFunction.solve_equations_bellman_with_policy_symbolic_except_params(policy, [])
+    state_value_solution_symbolic = EquationStateValueFunction.solve_equations_bellman_with_policy_symbolic_except_params(policy, []);
     disp("STEP2: 期待効用方程式を解く");
-    expected_utility_solution_symbolic = EquationExpectedUtility.solve_expected_utility_with_policy_symbolic_except_params(policy, [])
+    expected_utility_solution_symbolic = EquationExpectedUtility.solve_expected_utility_with_policy_symbolic_except_params(policy, []);
     state_value_solutions{i} = state_value_solution_symbolic;
     expected_utility_solutions{i} = expected_utility_solution_symbolic;
   end
