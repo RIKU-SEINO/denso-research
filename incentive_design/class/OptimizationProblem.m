@@ -196,7 +196,8 @@ classdef OptimizationProblem
         x0, ... % 初期値
         A_ineq, b_ineq, ... % 不等式制約
         A_eq, b_eq, ... % 等式制約
-        [], [], [], ... % 非線形制約
+        [], [], ... % 下界と上界
+        [], ... % 非線形制約
         options ... % オプション
       );
 
@@ -220,16 +221,14 @@ classdef OptimizationProblem
       [A_eq, b_eq] = obj.get_linear_equality_constraint();
       [A_ineq, b_ineq] = obj.get_linear_inequality_constraint();
 
-      num_incentives = ParamsHelper.get_num_of_incentives();
-
       options = optimoptions('linprog', 'Display', 'iter');
 
       [x, fval, exitflag, output] = linprog( ...
         A_fun, ... % 目的関数の係数行列
         A_ineq, b_ineq, ... % 不等式制約
         A_eq, b_eq, ... % 等式制約
-        -inf(num_incentives, 1), ... % 下界
-        inf(num_incentives, 1), ... % 上界
+        [], ... % 下界
+        [], ... % 上界
         options ... % オプション
       );
 
@@ -292,20 +291,35 @@ classdef OptimizationProblem
   end
 
   methods (Static)
-    function result = execute_linprog_all(objs)
-      % 最適化問題のリストを受け取り、それぞれの最適化問題を実行し、どの最適化問題の結果が一番最適なのかを返す
-      % OptimizationProblem.execute_linprog()は、ORを含む制約条件を持つ最適化問題を実行できないが、
+    function bool = is_success(result)
+      % 最適化問題の実行結果が成功したかどうかを返す
+      %
+      % Parameters:
+      %   result (OptimizationProblem): 最適化問題の実行結果
+      %
+      % Returns:
+      %   bool (logical): 最適化問題の実行結果が成功したかどうか
+
+      bool = ~isempty(result.exitflag) && result.exitflag == 1;
+    end
+
+    function result = execute_all(objs, solver)
+      % 最適化問題のセル配列objsを受け取り、それぞれの最適化問題を実行し、どの最適化問題の結果が一番最適なのかを返す
+      % OptimizationProblem.execute_linprog()やOptimizationProblem.execute_fmincon()は、ORを含む制約条件を持つ最適化問題を実行できないが、
       % MathUtils.expand_or_optimized()でOR条件を展開し、
-      % 得られた複数の制約条件それぞれについて、OptimizationProblem.execute_linprog()を実行し、
+      % 得られた複数の制約条件それぞれについて、OptimizationProblem.execute_linprog()やOptimizationProblem.execute_fmincon()を実行し、
       % その結果を比較することで、OR条件を含む制約条件を持つ最適化問題を実行できる。
       %
       % Parameters:
       %   objs (cell<OptimizationProblem>): 最適化問題のセル配列
+      %   method (function_handle): 最適化問題を実行する関数
+      %     ・'linprog'
+      %     ・'fmincon'
       %
       % Returns:
       %   result (OptimizationProblem): 最適化問題の結果
 
-      % objsの全てについて、eq_constraintとineq_constraint以外のプロパティが同じであるかをチェックする
+      % objsに含まれる最適化問題のvariables, objective_function, is_minimizationが同じであるかをチェックする
       for i = 1:length(objs)
         if ~isequal(objs{i}.variables, objs{1}.variables)
           error('Property "variables" must be the same for all OptimizationProblem instances');
@@ -318,10 +332,17 @@ classdef OptimizationProblem
         end
       end
 
+      % objsに含まれる最適化問題を実行する
       results = {};
       for i = 1:length(objs)
-        tmp_result = objs{i}.execute_linprog();
-        if ~isempty(tmp_result.fval)
+        if strcmp(solver, 'linprog')
+          tmp_result = objs{i}.execute_linprog();
+        elseif strcmp(solver, 'fmincon')
+          tmp_result = objs{i}.execute_fmincon();
+        else
+          error('OptimizationProblem.execute_allでは、solverに''linprog''か''fmincon''を指定してください');
+        end
+        if OptimizationProblem.is_success(tmp_result)
           results{end+1} = tmp_result;
         end
       end
@@ -348,7 +369,7 @@ classdef OptimizationProblem
       %   None
 
       fprintf('\n==== 最適化問題の実行結果 ====\n');
-      if isempty(result.fval)
+      if ~OptimizationProblem.is_success(result)
         fprintf('最適化問題の実行に失敗しました\n');
       else
         fprintf('最適化問題の実行に成功しました\n');
@@ -366,6 +387,7 @@ classdef OptimizationProblem
       if isfield(result.output, 'message')
         fprintf('メッセージ: %s\n', result.output.message);
       end
+
       fprintf('=============================\n\n');
     end
   end
