@@ -56,7 +56,7 @@ classdef ParamsHelper
       end
 
       % タクシーの即時報酬に関するパラメータ
-      w = 1000;
+      w = 2000;
       c = 10;
       a = 100;
       u_v = ParamsHelper.utility_taxi(w, c, a);

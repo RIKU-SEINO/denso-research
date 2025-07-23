@@ -37,7 +37,7 @@ for i = 1:length(policies)
   for j = 1:length(bp_stability_ineqs)
     ineq = and(optimality_ineq, bp_stability_ineqs{j});
     problems{j} = OptimizationProblem( ...
-      variables, ... % 説明変数
+      variables, ... % 決定変数
       f_sym, ... % 目的関数
       true, ... % trueなので最小化問題
       incentive_eq, ... % 等式制約条件

@@ -100,6 +100,20 @@ classdef PlayerSet
       label = strcat('{', label, '}');
     end
 
+    function label = latex_label(obj)
+      % プレイヤーの集合のLaTeXラベルを取得する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   label (char): プレイヤーの集合のLaTeXラベル
+
+      labels = Player.latex_labels(obj.players);
+      label = char(strjoin(labels, ','));
+      label = strcat('\{', label, '\}');
+    end
+
     function index = index(obj)
       % プレイヤーの集合のインデックスを取得する
       %
@@ -492,6 +506,21 @@ classdef PlayerSet
       labels = cell(length(player_sets), 1);
       for i = 1:length(player_sets)
         labels{i} = player_sets{i}.label();
+      end
+    end
+
+    function labels = latex_labels(player_sets)
+      % プレイヤ集合のLaTeXラベル一覧を取得する
+      %
+      % Parameters:
+      %   player_sets (cell<PlayerSet>): プレイヤ集合の配列
+      %
+      % Returns:
+      %   labels (cell<char>): プレイヤ集合のLaTeXラベルの配列
+
+      labels = cell(length(player_sets), 1);
+      for i = 1:length(player_sets)
+        labels{i} = player_sets{i}.latex_label();
       end
     end
     

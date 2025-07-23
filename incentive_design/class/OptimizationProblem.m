@@ -4,7 +4,7 @@ classdef OptimizationProblem
 
   % properties
   properties
-    variables % 説明変数
+    variables % 決定変数
     objective_function % 目的関数
     is_minimization % 最小化問題かどうか
     eq_constraint % 等式制約条件
@@ -18,7 +18,7 @@ classdef OptimizationProblem
       % 最適化問題は、説明変数・目的関数・制約条件（等式制約条件・不等式制約条件）からなる
       %
       % Parameters:
-      %   variables (sym[]): 説明変数
+      %   variables (sym[]): 決定変数
       %   objective_function (sym): 目的関数
       %   is_minimization (logical): 最小化問題かどうか
       %   eq_constraint (sym | 'none'): 等式制約条件
