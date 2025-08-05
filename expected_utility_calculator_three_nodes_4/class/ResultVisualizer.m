@@ -22,7 +22,7 @@ classdef ResultVisualizer
         solution = solutions{i};
         policy = policies{i};
         if is_optimal(i)
-          optimal_str = '（最適方策）';
+          optimal_str = '(=optimal)';
         else
           optimal_str = '';
         end
@@ -34,7 +34,7 @@ classdef ResultVisualizer
         fig = player_set_graph.plot_graph();
         title(['\pi_{', num2str(i), '}', optimal_str, 'の下でのマルコフ決定過程の遷移グラフ'], ...
           'Interpreter', 'tex');
-        exportgraphics(fig, sprintf('result/policy_%d_state_value_graph.png', i));
+        print(fig, sprintf('result/policy_%d_state_value_graph', i), '-depsc');
       end
     end
 
@@ -58,7 +58,7 @@ classdef ResultVisualizer
         subplot(num_rows, num_cols, i);
         solution = solutions{i};
         if is_optimal(i)
-          optimal_str = '（最適方策）';
+          optimal_str = '(=optimal)';
         else
           optimal_str = '';
         end
@@ -81,8 +81,7 @@ classdef ResultVisualizer
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 90);
         end
       end
-      sgtitle('方策ごとの状態価値関数');
-      exportgraphics(fig, 'result/state_value_bar.png', 'Resolution', '300');
+      print(fig, 'result/state_value_bar', '-depsc');
     end
 
     function display_max_state_value_with_policy_color_p2_p3(solutions_symbolic)
@@ -96,7 +95,7 @@ classdef ResultVisualizer
         disp(player_set.label());
         funcs = cellfun(@(x) x.(fields{i}), solutions_symbolic, 'UniformOutput', false);
         Utils.plot_max_symbolic_funcs_3d(funcs, ["p_2", "p_3"], [0, 1], [0, 1], 100);
-        title(sprintf('プレイヤ集合: %s', player_set.label()));
+        title(sprintf('player set: %s', player_set.label()));
       end
     end
   end        
@@ -126,11 +125,12 @@ classdef ResultVisualizer
 
       for policy_index = 1:length(solutions)
         solution = solutions{policy_index};
-        if is_optimal(policy_index)
-          optimal_str = '（最適方策）';
-        else
-          optimal_str = '';
-        end
+        % if is_optimal(policy_index)
+        %   optimal_str = '(=optimal)';
+        % else
+        %   optimal_str = '';
+        % end
+
         x_evaluated = double(subs(x, fieldnames(solution), struct2cell(solution)));
   
         fig = figure('Units', 'pixels', 'Position', [0, 0, 3000, 2000]);
@@ -141,7 +141,7 @@ classdef ResultVisualizer
           % 棒グラフを生成
           bar(expected_utilities);
           % タイトルとラベルを設定
-          title_str = sprintf('プレイヤ集合: %s', player_set.latex_label());
+          title_str = sprintf('player set: %s', player_set.latex_label());
           title(title_str, 'Interpreter', 'tex');
           xticks(1:length(all_possible_players));
           xticklabels(Player.latex_labels(all_possible_players));
@@ -154,9 +154,7 @@ classdef ResultVisualizer
               'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 0); 
           end
         end
-        sgtitle(['\pi_{', num2str(policy_index), '}', optimal_str, 'の下での期待効用'], ...
-          'Interpreter', 'tex');  
-        exportgraphics(fig, sprintf('result/policy_%d_expected_utilities.png', policy_index));
+        print(fig, sprintf('result/policy_%d_expected_utilities', policy_index), '-depsc');
       end
     end
   end

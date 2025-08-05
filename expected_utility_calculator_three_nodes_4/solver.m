@@ -103,8 +103,8 @@ end
 
 % 4. 数値計算結果の表示（数値計算モードが選択された場合のみ）
 if calc_mode == 1 || calc_mode == 3
-  % 4-1. プレイヤ集合の状態価値関数をグラフとして表示
-  ResultVisualizer.display_state_values_as_graphs(state_value_solutions, policies, is_optimal);
+  % % 4-1. プレイヤ集合の状態価値関数をグラフとして表示
+  % ResultVisualizer.display_state_values_as_graphs(state_value_solutions, policies, is_optimal);
 
   % 4-2. プレイヤ集合の状態価値関数を棒グラフとして表示
   ResultVisualizer.display_state_values_as_bar(state_value_solutions, is_optimal);
