@@ -101,16 +101,16 @@ classdef PlayerSet
     end
 
     function label = latex_label(obj)
-      % プレイヤーの集合のLaTeXラベルを取得する
+      % プレイヤーの集合のLaTeX形式のラベルを取得する
       %
       % Parameters:
       %   obj (PlayerSet): 対象の PlayerSet オブジェクト
       %
       % Returns:
-      %   label (char): プレイヤーの集合のLaTeXラベル
+      %   label (char): プレイヤーの集合のLaTeX形式のラベル
 
       labels = Player.latex_labels(obj.players);
-      label = char(strjoin(labels, ','));
+      label = char(strjoin(labels, ', '));
       label = strcat('\{', label, '\}');
     end
 
@@ -376,6 +376,19 @@ classdef PlayerSet
       end
     end
 
+    function result = has_multiple_possible_player_matchings(obj)
+      % 指定したプレイヤ集合において、考えられる全てのプレイヤマッチングが複数あるか判定する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   result (logical): 考えられる全てのプレイヤマッチングが複数ある場合は true, そうでない場合は false
+
+      player_matchings = obj.get_all_possible_player_matchings();
+      result = length(player_matchings) > 1;
+    end
+
     function player_pairs = get_all_possible_player_pairs(obj)
       % 指定したプレイヤ集合において、考えられる全てのプレイヤペアを取得する
       %
@@ -510,13 +523,13 @@ classdef PlayerSet
     end
 
     function labels = latex_labels(player_sets)
-      % プレイヤ集合のLaTeXラベル一覧を取得する
+      % プレイヤ集合のLaTeX形式のラベル一覧を取得する
       %
       % Parameters:
       %   player_sets (cell<PlayerSet>): プレイヤ集合の配列
       %
       % Returns:
-      %   labels (cell<char>): プレイヤ集合のLaTeXラベルの配列
+      %   labels (cell<char>): プレイヤ集合のLaTeX形式のラベルの配列
 
       labels = cell(length(player_sets), 1);
       for i = 1:length(player_sets)

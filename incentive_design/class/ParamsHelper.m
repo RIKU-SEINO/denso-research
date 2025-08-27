@@ -1,5 +1,97 @@
 classdef ParamsHelper
   methods (Static)
+    function result = should_create_incentive(player_set, player)
+      % プレイヤ集合において、考えられる全てのプレイヤマッチングが複数あり、かつそのプレイヤ集合においてプレイヤが含まれている場合に、インセンティブを作成するか判定する
+      %
+      % Parameters:
+      %   player_set (PlayerSet): プレイヤ集合
+      %   player (Player): プレイヤ
+      %
+      % Returns:
+      %   result (logical): インセンティブを作成する場合は true, そうでない場合は false
+
+      result = player_set.has_multiple_possible_player_matchings() & player_set.has(player);
+    end
+
+    function u = init_incentive()
+      % インセンティブの初期化
+      % 期待効用と同じように、あるプレイヤ集合において、あるプレイヤに付与するインセンティブをシンボリックに生成する。これは変数ではなくパラメータであるため、ParamsHelperに定義している。
+      %
+      % Parameters: None
+      %
+      % Returns:
+      %   u (symbolic): インセンティブのシンボリック変数の配列
+      persistent u_cache;
+
+      if isempty(u_cache)
+        all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
+        all_possible_players = Player.get_all_possible_players();
+        u_cache = sym(zeros(length(all_possible_player_sets), length(all_possible_players)));
+        for i = 1:length(all_possible_player_sets)
+          player_set = all_possible_player_sets{i};
+          for j = 1:length(all_possible_players)
+            player = all_possible_players{j};
+            varname = strcat('u_', player_set.label(), '_', player.label());
+            varname = matlab.lang.makeValidName(varname);
+            if ParamsHelper.should_create_incentive(player_set, player)
+              syms(varname, 'real');
+              u_cache(i, j) = eval(varname);
+              fprintf('Created incentive parameter: %s\n', varname);
+            else
+              u_cache(i, j) = sym(0);
+              fprintf('Skipped creating incentive parameter: %s\n', varname);
+            end
+          end
+        end
+      end
+
+      u = u_cache;
+    end
+
+    function incentives = get_all_incentives_as_vector()
+      % すべてのインセンティブを1*nのベクトルとして取得。
+      % ただし、インセンティブが0として生成されているものは含めない
+      %
+      % Parameters:
+      %   None
+      %
+      % Returns:
+      %   incentives (sym[]): インセンティブのシンボリック変数の配列
+
+      u = ParamsHelper.init_incentive();
+
+      incentives = u(:).';
+      is_not_zero = arrayfun(@(x) ~isempty(symvar(x)), incentives);
+      incentives = incentives(is_not_zero);
+    end
+
+    function num = get_num_of_incentives()
+      % インセンティブの数を取得
+      %
+      % Parameters:
+      %   None
+      %
+      % Returns:
+      %   num (int): インセンティブの数
+
+      num = length(ParamsHelper.get_all_incentives_as_vector());
+    end
+
+    function incentive = get_incentive(player_set, player)
+      % プレイヤ集合において、方策に従った時にプレイヤに付与するインセンティブを取得する
+      %
+      % Parameters:
+      %   player_set (PlayerSet): プレイヤ集合
+      %   player (Player): プレイヤ
+
+      if ~ParamsHelper.should_create_incentive(player_set, player)
+        error('考慮されていないインセンティブを取得しようとしました: %s, %s', player_set.label(), player.label());
+      end
+
+      u = ParamsHelper.init_incentive();
+      incentive = u(player_set.index(), player.index());
+    end
+
     function [w, c, a, u_v_positive, u_v_negative, r, b, u_ps_positive, u_ps_negative, p, p_, g, q] = get_symbolic_params()
       persistent cached_params;
       if ~isempty(cached_params)
@@ -181,7 +273,7 @@ classdef ParamsHelper
     end
 
     function params = all_symbolic_params()
-      % すべてのパラメータをシンボリックに取得。ただし、paramsにsym(0)やsym(1)が含まれている場合も含める
+      % すべてのパラメータをシンボリックに取得。ただし、paramsにsym(0)やsym(1)が含まれている場合も含めない
       % 
       % Parameters:
       %   None
@@ -226,7 +318,10 @@ classdef ParamsHelper
     end
 
     function expr = evaluate_except_params(expr, params)
-      % シンボリックな式について、指定したパラメータ以外を数値的に評価する
+      % シンボリックな式について、指定したパラメータ以外を数値的に評価する。
+      % ただし、paramsで指定したパラメータ以外にも、インセンティブパラメータは評価しない仕様になっている
+      % 例えば、params=[]とすると、インセンティブパラメータ以外のパラメータを数値的に評価する。
+      % TODO: ここが開発者視点でわかりづらいので、もう少しわかりやすくする
       % 
       % Parameters:
       %   expr (sym): シンボリックな式
@@ -261,6 +356,36 @@ classdef ParamsHelper
 
       % 指定パラメータのみを数値に置き換え
       expr = subs(expr, target_symbolic_params, target_valued_params);
+    end
+
+    function expr = incentive_condition()
+      % インセンティブに関する制約式を生成する。これは、指定する方策ごとに制約式が異なることに注意。
+      % 制約1. 各ステップのインセンティブの収支制約
+      %    ・全てのプレイヤ集合について、そのプレイヤ集合に含まれる全てのプレイヤに配分するインセンティブの合計が0になることを制約とする。
+      % 制約2. インセンティブ付与時の即時報酬が
+      %
+      % Parameters:
+      %   None
+      %
+      % Returns:
+      %   expr (sym): インセンティブに関する制約式
+
+      all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
+      all_possible_players = Player.get_all_possible_players();
+
+      expr = symtrue;
+      for i = 1:length(all_possible_player_sets)
+        player_set = all_possible_player_sets{i};
+        sum_of_incentives = sym(0);
+        for j = 1:length(all_possible_players)
+          player = all_possible_players{j};
+          if ParamsHelper.should_create_incentive(player_set, player)
+            incentive = ParamsHelper.get_incentive(player_set, player);
+            sum_of_incentives = sum_of_incentives + incentive;
+          end
+        end
+        expr = expr & (sum_of_incentives == 0);
+      end
     end
 
     function expr = params_condition()

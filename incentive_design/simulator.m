@@ -14,16 +14,19 @@ passengers = Player.get_all_possible_passengers();
 
 % --- Social Utility Figure ---
 figure(1); hold on;
-xlabel('time step'); ylabel('utility');
+title('社会全体の効用の累積和の推移');
+xlabel('Time Step'); ylabel('Utility');
 
 % --- Taxi Utility Figure ---
 figure(2); hold on;
-xlabel('time step'); ylabel('utility');
+title('タクシーの効用の累積和の推移');
+xlabel('Time Step'); ylabel('Utility');
 
 for i = 1:length(passengers)
   passenger = passengers{i};
   figure(2+i);
-  xlabel('time step'); ylabel('utility');
+  title(sprintf('乗客%sの効用の累積和の推移', passenger.label));
+  xlabel('Time Step'); ylabel('Utility');
 end
 
 % --- Passenger Utility Figures ---
@@ -81,12 +84,12 @@ end
 
 legend_labels = arrayfun(@(i) sprintf('\\pi_{%d}', i), 1:length(all_possible_policies), 'UniformOutput', false);
 figure(1); legend(legend_labels, 'Location', 'northwest', 'Interpreter', 'tex'); grid on;
-exportgraphics(figure(1), 'simulation_result/social_utility_cumulative.eps');
+exportgraphics(figure(1), 'simulation_result/social_utility_cumulative.png');
 figure(2); legend(legend_labels, 'Location', 'northwest', 'Interpreter', 'tex'); grid on;
-exportgraphics(figure(2), 'simulation_result/taxi_utility_cumulative.eps');
+exportgraphics(figure(2), 'simulation_result/taxi_utility_cumulative.png');
 for i = 1:length(passengers)
   figure(2+i); legend(legend_labels, 'Location', 'northwest', 'Interpreter', 'tex'); grid on;
-  exportgraphics(figure(2+i), sprintf('simulation_result/passenger_%s_utility_cumulative.eps', passengers{i}.label));
+  exportgraphics(figure(2+i), sprintf('simulation_result/passenger_%s_utility_cumulative.png', passengers{i}.label));
 end
 
 function result = simulate(policy, player_set_initial)
@@ -102,9 +105,9 @@ function result = simulate(policy, player_set_initial)
     utilities_passengers(passengers{i}.label) = 0;
   end
 
-  t_max = 200;
+  t_max = 50;
   for i = 1:t_max
-    % fprintf('方策π_%d, Time Step %d/%d\n', policy.index, i, t_max)
+    fprintf('方策π_%d, Time Step %d/%d\n', policy.index, i, t_max)
 
     % 方策に従いマッチングを決定
     player_matching = policy.get_player_matching_by_player_set(player_set);
