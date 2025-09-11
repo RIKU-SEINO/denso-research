@@ -100,9 +100,7 @@ classdef ParamsHelper
       end
 
       % タクシーの即時報酬に関するパラメータ
-      syms 'w' 'positive';
-      syms 'c' 'positive';
-      syms 'a' 'positive';
+      syms w c a;
       u_v = ParamsHelper.utility_taxi(w, c, a);
       u_v_positive = u_v{1};
       u_v_negative = u_v{2};
@@ -110,10 +108,7 @@ classdef ParamsHelper
       % 乗客の即時報酬に関するパラメータ
       % == Assumption ==
       % ノード1には乗客は出現しない
-      syms r_2 'positive';
-      syms r_3 'positive';
-      syms b_2 'real' 'positive';
-      syms b_3 'real' 'positive';
+      syms r_2 r_3 b_2 b_3;
       r = [0; r_2; r_3];
       b = [0; b_2; b_3];
       u_ps = ParamsHelper.utility_passenger(r, b);
@@ -121,23 +116,78 @@ classdef ParamsHelper
       u_ps_negative = u_ps{2};
 
       % 乗客の出現に関するパラメータ
-      syms p_2 'real' 'positive';
-      syms p_3 'real' 'positive';
+      syms p_2 p_3;
       p = [0; p_2; p_3];
       p_ = [0, 0, 0;
             1, 0, 0;
             1, 0, 0];
 
       % 割引率
-      syms 'g' 'positive';
+      syms g;
 
       % 一般の場合はtrans_prob_vecを使う
       % q = ParamsHelper.trans_prob_vec(p, p_);
-      % == Assumption == 
+      % == Assumption ==
       % ps_{2,1}またはps_{3,1}のみ出現することを前提としているので、trans_prob_vec_only_ps21_ps31を使う
       q = ParamsHelper.trans_prob_vec_only_ps21_ps31(p, p_);
 
       cached_params = {w, c, a, u_v_positive, u_v_negative, r, b, u_ps_positive, u_ps_negative, p, p_, g, q};
+    end
+
+    function assume_symbolic_params(varargin)
+      % 引数で与えたシンボリック変数についてのみassumeを適用する関数
+      %
+      % この関数は、シンボリック計算におけるパラメータの制約（assume）を、指定した変数のみに対して適用します。
+      % get_symbolic_params 関数で生成されたシンボリック変数を部分的に渡すことで、必要な変数だけに制約を掛けることができます。
+      %
+      % 使用例：
+      %   - すべてのパラメータにassumeを適用する場合：
+      %     [w, c, a, u_v_positive, ~, r, b, u_ps_positive, ~, p, ~, g, ~] = ParamsHelper.get_symbolic_params();
+      %     ParamsHelper.assume_symbolic_params(w, c, a, u_v_positive, r, b, u_ps_positive, p, g);
+      %
+      %   - 指定したパラメータ（例: w と g のみ）にassumeを適用する場合：
+      %     ... (上記と同じ)
+      %     ParamsHelper.assume_symbolic_params(w, g);
+      %
+      %   - 特定の配列パラメータ（例: r のみ）にassumeを適用する場合：
+      %     ParamsHelper.assume_symbolic_params(r);
+      %
+      % Parameters:
+      %   varargin: 可変引数。ParamsHelper.get_symbolic_params() で生成されたシンボリック変数を渡します。
+      %             スカラー変数（w, c, a, g, r_2, r_3, b_2, b_3, p_2, p_3）を渡すことができます。
+      %             渡された変数のみに対して対応する制約条件が assume されます。
+      %
+      %             制約条件の詳細：
+      %             - w, c, a: > 0
+      %             - g: 0 < g < 1
+      %             - r_2, r_3, b_2, b_3: > 0
+      %             - p_2, p_3: 0 < p < 1
+      %
+      % Returns: None
+
+      for i = 1:length(varargin)
+        var = varargin{i};
+        var_name = char(var);
+
+        switch var_name
+          case 'w'
+            assume(var > 0);
+          case 'c'
+            assume(var > 0);
+          case 'a'
+            assume(var > 0);
+          case 'g'
+            assume(0 < var & var < 1);
+          case {'p_2', 'p_3'}
+            assume(0 <= var & var <= 1);
+          case {'r_2', 'r_3'}
+            assume(var > 0);
+          case {'b_2', 'b_3'}
+            assume(var > 0);
+          otherwise
+            warning('Unknown parameter name: %s. No assumptions applied.', var_name);
+        end
+      end
     end
 
     function [w, c, a, u_v_positive, u_v_negative, r, b, u_ps_positive, u_ps_negative, p, p_, g, q, V_init, x_init] = get_valued_params()
@@ -317,17 +367,19 @@ classdef ParamsHelper
       expr = subs(expr, all_symbolic_params, all_valued_params);
     end
 
-    function expr = evaluate_except_params(expr, params)
-      % シンボリックな式について、指定したパラメータ以外を数値的に評価する。
-      % ただし、paramsで指定したパラメータ以外にも、インセンティブパラメータは評価しない仕様になっている
-      % 例えば、params=[]とすると、インセンティブパラメータ以外のパラメータを数値的に評価する。
-      % TODO: ここが開発者視点でわかりづらいので、もう少しわかりやすくする
+    function expr = evaluate_params(expr, params, is_exclude_mode)
+      % シンボリックな式について、指定したパラメータを評価するか、指定したパラメータ以外を評価するかを選択し、それに応じて式を評価する。
+      % ただし、インセンティブは常に評価しない仕様になっている。
+      % 次に例を示す。ただし、all_symbolic_params=["x", "y"], all_valued_params=[1,2]のケースを考える。
+      % ex1. expr=x+y, params=["x"], is_exclude_mode=false: expr=1+y
+      % ex2. expr=x+y, params=["x"], is_exclude_mode=true: expr=x+2
       % 
       % Parameters:
       %   expr (sym): シンボリックな式
-      %   params (sym): 評価しないパラメータ
+      %   params (sym): 評価対象のパラメータ
+      %   is_exclude_mode (logical): trueなら指定パラメータを除外して評価、falseなら指定パラメータのみ評価
       % Returns:
-      %   expr (sym): 指定パラメータ以外を数値的に評価した式。変数や未評価のパラメータはsymbolicのまま
+      %   expr (sym): パラメータを数値的に評価した式。変数や未評価のパラメータはsymbolicのまま
       all_symbolic_params = ParamsHelper.all_symbolic_params();
       all_valued_params = ParamsHelper.all_valued_params();
 
@@ -347,8 +399,13 @@ classdef ParamsHelper
         params = param_syms;
       end
 
-      % 指定されたparamsに一致しないパラメータを探す
-      is_target = ~ismember(all_symbolic_params, params);
+      if is_exclude_mode
+        % 指定されたparamsに一致しないパラメータを探す
+        is_target = ~ismember(all_symbolic_params, params);
+      else
+        % 指定されたparamsに一致するパラメータを探す
+        is_target = ismember(all_symbolic_params, params);
+      end
 
       % 対応するsymbolic-paramとその数値を抽出
       target_symbolic_params = all_symbolic_params(is_target);
@@ -386,49 +443,6 @@ classdef ParamsHelper
         end
         expr = expr & (sum_of_incentives == 0);
       end
-    end
-
-    function expr = params_condition()
-      [w, c, a, u_v_positive, ~, r, b, u_ps_positive, ~, p, ~, g, ~] = ParamsHelper.get_symbolic_params();
-
-      expr = symtrue;
-      % 割引率
-      expr = expr & (0 <= g & g < 1);
-      % 乗客の出現確率
-      % == Assumption ==
-      % ノード1には乗客は出現しない
-      expr = expr & (0 < p(2) & p(2) <= 1);
-      expr = expr & (0 < p(3) & p(3) <= 1);
-      % タクシーの即時報酬
-      expr = expr & (w > 0);
-      expr = expr & (c > 0);
-      expr = expr & (a > 0);
-      for i = 1:3
-        for j = 1:3
-          for k = 1:3
-            if j~= k % 乗客の出発地と目的地が同じになることはない
-              expr = expr & (u_v_positive(i, j, k) > 0);
-            end
-          end
-        end
-      end
-      % 乗客の即時報酬
-      % == Assumption ==
-      % ノード1には乗客は出現しない
-      expr = expr & (r(2) > 0);
-      expr = expr & (b(2) > 0);
-      expr = expr & (r(3) > 0);
-      expr = expr & (b(3) > 0);
-      for i = 1:3
-        for j = 1:3
-          if j == 1
-            continue; % == Assumption == ノード1には乗客は出現しない
-          end
-          expr = expr & (u_ps_positive(i, j) > 0);
-        end
-      end
-
-      expr = simplify(expr);
     end
   end
 end

@@ -136,10 +136,11 @@ classdef OptimizationProblem
         return;
       end
 
-      % AND条件を分割
-      constraints = MathUtils.get_children(obj.eq_constraint, '&');
+      [A, b] = EqualityInequalityHelper.get_equality_matrix( ...
+        obj.variables, ...
+        obj.eq_constraint ...
+      );
 
-      [A, b] = equationsToMatrix(constraints, obj.variables);
       A = double(A);
       b = double(b);
     end
@@ -160,13 +161,11 @@ classdef OptimizationProblem
         return;
       end
 
-      % AND条件を分割
-      constraints = MathUtils.get_children(obj.ineq_constraint, '&');
+      [A, b] = EqualityInequalityHelper.get_inequality_matrix( ...
+        obj.variables, ...
+        obj.ineq_constraint ...
+      );
 
-      % 各constraintを、lhs-rhsの形式に変換する
-      constraints = cellfun(@(c) lhs(c) - rhs(c) == 0, constraints, 'UniformOutput', false);
-
-      [A, b] = equationsToMatrix(constraints, obj.variables);
       A = double(A);
       b = double(b);
     end
