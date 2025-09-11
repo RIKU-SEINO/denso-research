@@ -11,6 +11,7 @@ if exist(target_data, 'file')
   policies = Policy.get_all_possible_policies();
   state_value_solutions = data.state_value_solutions;
   expected_utility_solutions = data.expected_utility_solutions;
+  disp('データを読み込みました');
 else
   error('データが存在しません');
 end

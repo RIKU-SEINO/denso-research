@@ -91,11 +91,7 @@ classdef Solution
 
       for i = 1:length(obj.values)
         value = obj.values{i};
-        if isa(value, 'double')
-          continue;
-        elseif isa(value, 'sym') && isempty(symvar(value))
-          continue;
-        else
+        if ~Utils.isnumeric(value)
           result = false;
           break;
         end

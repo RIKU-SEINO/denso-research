@@ -103,13 +103,19 @@ classdef EquationStateValueFunction
       solution = StateValueSolution(solution);
     end
 
-    function solution = solve_equations_bellman_with_policy_symbolic_except_params(policy, params_to_exclude)
+    function solution = solve_equations_bellman_with_policy( ...
+        policy, ...
+        params, ...
+        is_exclude_mode ...
+      )
       % 方策に基づいて、ベルマン方程式をシンボリックに解く
-      % ただし、指定したパラメータparams_to_exclude以外を数値に置き換える
+      % ただし、指定したパラメータを評価するか、指定したパラメータ以外を評価するかを選択し、それに応じて式を評価する。
+      % インセンティブは常に評価しない仕様になっている。
       %
       % Parameters:
       %   policy (Policy): 方策
-      %   params_to_exclude (string[]): 数値に置き換えないパラメータの名前(string)の配列
+      %   params (sym): 評価対象のパラメータ
+      %   is_exclude_mode (logical): trueなら指定パラメータを除外して評価、falseなら指定パラメータのみ評価
       %
       % Returns:
       %   solution (struct): ベルマン方程式のシンボリックな解を格納する構造体
@@ -119,7 +125,7 @@ classdef EquationStateValueFunction
       equations = EquationStateValueFunction.build_equations_bellman_with_policy(policy);
       V = VariablesHelper.init_state_values();
       all_vars = symvar(V);
-      equations_evaluated = ParamsHelper.evaluate_except_params(equations, params_to_exclude);
+      equations_evaluated = ParamsHelper.evaluate_params(equations, params, is_exclude_mode);
       solution = solve(equations_evaluated, all_vars);
       solution = StateValueSolution(solution);
     end
