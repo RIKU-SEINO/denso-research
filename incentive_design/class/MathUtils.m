@@ -82,7 +82,7 @@ classdef MathUtils
           tmp_expr = tmp_expr & combined{j};
         end
         if contains(char(tmp_expr), '|')
-          error('ORが残っています。このexprは展開できません。');
+          error('[MathUtils.expand_or] Error: OR operator remains in expression');
         end
         exprs{i} = tmp_expr;
       end
@@ -101,8 +101,10 @@ classdef MathUtils
 
       rest_expr = expr;
       factored_expr = symtrue;
+      
       while true
         common_exprs = MathUtils.get_common_exprs(rest_expr);
+
         if isempty(common_exprs)
           factored_expr = factored_expr & rest_expr;
           break;
@@ -112,7 +114,7 @@ classdef MathUtils
         [factored_expr_tmp, rest_expr] = MathUtils.factor_common_expr(rest_expr, most_common_expr);
         factored_expr = factored_expr & factored_expr_tmp;
 
-        if isequal(simplify(rest_expr), symtrue)
+        if isequal(rest_expr, symtrue)
           break;
         end
       end
@@ -132,15 +134,17 @@ classdef MathUtils
       %   ex. expr = (A | B) & (A | C) & (B | D) , common_expr = A のとき、
       %       factored_expr = A | (B & C), rest_expr = (B | D) となる
     
-      and_children = MathUtils.get_children(expr, '&'); % ex. {A | B, A | C, B | D}
+      and_children = MathUtils.get_children(expr, '&');
+
       grouped_expr = symtrue;
       rest_expr = symtrue;
+      
       for i = 1:length(and_children)
-        and_child = and_children{i}; % ex. A | B
+        and_child = and_children{i};
         if contains(char(and_child), char(common_expr))
-          or_children = MathUtils.get_children(and_child, '|'); % ex. {A, B}
+          or_children = MathUtils.get_children(and_child, '|');
           for j = 1:length(or_children)
-            or_child = or_children{j}; % ex1. A, ex2. B
+            or_child = or_children{j};
             if ~strcmp(char(or_child), char(common_expr))
               grouped_expr = grouped_expr & or_child;
             end
@@ -167,11 +171,13 @@ classdef MathUtils
       %   ex. {A, B}
 
       count_map = MathUtils.count_or_conditions(expr);
+
       common_exprs = {};
       keys = count_map.keys();
       for i = 1:length(keys)
         key = keys{i};
-        if count_map(key) >= 2
+        count = count_map(key);
+        if count >= 2
           common_exprs{end+1} = str2sym(key);
         end
       end
@@ -213,7 +219,7 @@ classdef MathUtils
   
       % カウント
       counts = histcounts(idx, 1:(length(uniq_strs)+1));
-      [~, sort_idx] = sort(counts, 'descend'); % カウント数が多い順にソート
+      [~, sort_idx] = sort(counts, 'descend');
   
       % Map に保存
       count_map = containers.Map();
@@ -238,16 +244,18 @@ classdef MathUtils
       %   ex. expr = A, operator = '&' のとき、
       %       children_obtained = {A}
 
-      if contains(char(expr), '&') && contains(char(expr), '|')
+      expr_str = char(expr);
+      
+      if contains(expr_str, '&') && contains(expr_str, '|')
         expr_after_applied_children = children(expr);
-        operator_count_before = length(strfind(char(expr), operator));
+        operator_count_before = length(strfind(expr_str, operator));
         operator_count_after = length(strfind(join(string(expr_after_applied_children)), operator));
         if operator_count_after < operator_count_before
           children_obtained = expr_after_applied_children;
         else
           children_obtained = {expr};
         end
-      elseif contains(char(expr), operator)
+      elseif contains(expr_str, operator)
         children_obtained = children(expr);
       else
         children_obtained = {expr};
@@ -262,6 +270,95 @@ classdef MathUtils
       result = cell(numel(grid{1}), n);
       for i = 1:n
         result(:, i) = reshape(grid{i}, [], 1);
+      end
+    end
+
+    function result = is_always(expr)
+      % isAlwaysのラッパーとして、厳密な証明と数値検証の両方を組み合わせる
+      %
+      % Parameters:
+      %   expr - 論理式（sym）
+      %
+      % Returns:
+      %   result - 常に成立する場合は true, 常に成立しない場合は false, それ以外は error
+      
+      try
+        result = isAlways(expr, 'Unknown', 'error');
+      catch
+        fprintf('%sの厳密な証明に失敗したので、数値検証を行います\n', char(expr));
+        num_samples = 1e2;
+        vars = symvar(expr);
+        vals_mat = zeros(num_samples, length(vars));
+        for i = 1:length(vars)
+          range = MathUtils.get_range(vars(i));
+          min_val = range(1);
+          max_val = range(2);
+          vals_mat(:, i) = min_val + (max_val - min_val) * rand(num_samples, 1);
+        end
+
+        evaluated_conditions = zeros(num_samples, 1);
+        for i = 1:num_samples
+          evaluated_conditions(i) = subs(expr, vars, vals_mat(i, :));
+        end
+        if all(evaluated_conditions)
+          result = true;
+        elseif all(~evaluated_conditions)
+          result = false;
+        else
+          error('条件式の真偽値が一意に定まりません');
+        end
+      end
+    end
+
+    function range = get_range(targetVar)
+      % 変数に設定された仮定から数値範囲[min, max]を取得
+      %
+      % Parameters:
+      %   targetVar - 変数（sym）
+      %
+      % Returns:
+      %   range - 数値範囲[min, max]
+      %   ex. targetVar = x のとき、
+      %       range = [-inf, inf]
+      %   ex. targetVar = x, 仮定が x < 1 のとき、
+      %       range = [-inf, 1]
+      %   ex. targetVar = x, 仮定が x < 1 かつ x > 0 のとき、
+      %       range = [0, 1]
+
+      range = [-inf, inf]; % デフォルトは無制限
+      
+      % 指定された変数に関する仮定を取得
+      ParamsHelper.assume_symbolic_params(targetVar);
+      assumps = assumptions(targetVar);
+      
+      if isempty(assumps)
+        return; % 仮定がなければデフォルトを返す
+      end
+      
+      for i = 1:length(assumps)
+        cond = assumps(i);
+        parts = children(cond);
+        % 不等式の左辺と右辺を取得
+        lhs = parts{1};
+        rhs = parts{2};
+        operation = extractBetween(char(cond), ' ', ' ');
+        
+        % targetVarが左辺に含まれているかチェック
+        if contains(char(lhs), char(targetVar))
+          % targetVarが左辺にある場合、右辺がmax値
+          if strcmp(operation, '<')
+            range(2) = min(range(2), double(rhs) - 1e-10);
+          elseif strcmp(operation, '<=')
+            range(2) = min(range(2), double(rhs));
+          end
+        else
+          % targetVarが右辺にある場合、左辺がmin値 
+          if strcmp(operation, '<')
+            range(1) = max(range(1), double(lhs) + 1e-10);
+          elseif strcmp(operation, '<=')
+            range(1) = max(range(1), double(lhs));
+          end
+        end
       end
     end
   end
