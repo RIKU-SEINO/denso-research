@@ -82,6 +82,7 @@ classdef EqualityInequalityHelper
             % u_row(k) * l_row - l_row(k) * u_row で x_k の係数がゼロになる
             % 例: x_k <= U と L <= x_k  --->  L <= U
             new_row = u_row(k) * l_row - l_row(k) * u_row;
+            % fprintf('Generated new inequality from upper %d and lower %d: %s\n', i, j, char(new_row));
             M_new(new_row_idx, :) = new_row;
             new_row_idx = new_row_idx + 1;
           end

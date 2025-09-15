@@ -19,7 +19,7 @@ end
 
 variables = ParamsHelper.get_all_incentives_as_vector();
 
-% 2. 実行可能領域の存在条件の導出
+% 2. 各方策ごとに安定化可能条件の導出
 for policy_index = 1:length(policies)
   policy = policies{policy_index};
   bp_stability_ineqs = MathUtils.expand_or_optimized( ...
@@ -30,8 +30,7 @@ for policy_index = 1:length(policies)
   condition = symfalse;
   for i = 1:length(bp_stability_ineqs)
     incentive_eq = ParamsHelper.incentive_condition();
-    % bp_stability_ineq = bp_stability_ineqs{i};
-    bp_stability_ineq = subs(bp_stability_ineqs{i}, 'g', 0);
+    bp_stability_ineq = bp_stability_ineqs{i};
 
     [A_eq, b_eq] = EqualityInequalityHelper.get_equality_matrix( ...
       variables, ...
@@ -40,7 +39,7 @@ for policy_index = 1:length(policies)
     [A_ineq, b_ineq] = EqualityInequalityHelper.get_inequality_matrix( ...
       variables, ...
       bp_stability_ineq ...
-    )
+    );
 
     condition_ = EqualityInequalityHelper.get_mixed_feasibility_condition( ...
       A_eq, ...
@@ -51,12 +50,34 @@ for policy_index = 1:length(policies)
 
     condition = or(condition, condition_);
 
-    % if isAlways(condition)
-    %   break; % 計算量を節約するため、常に成立する条件が見つかったらbreakする
-    % end
+    if isAlways(condition)
+      break; % 計算量を節約するため、常に成立するならばここで打ち切る
+    end
   end
-  condition = and(condition, ParamsHelper.get_assumption());
   fprintf('方策%dをインセンティブ安定化することが可能な条件: %s\n', policy_index, simplify(condition));
   pause;
+  disp('-----------------------------');
+end
+
+% 3. 各方策ごとに自律的安定条件の導出
+for policy_index = 1:length(policies)
+  policy = policies{policy_index};
+  bp_stability_ineqs = MathUtils.expand_or_optimized( ...
+    policy.bp_stability_condition(expected_utility_solutions) ...
+  );
+
+  disp(['policy', num2str(policy.index())]);
+  fprintf('BP安定条件制約数: %d\n', length(bp_stability_ineqs));
+  condition = symfalse;
+  for i = 1:length(bp_stability_ineqs)
+    condition = or( ...
+      condition, ...
+      ParamsHelper.set_incentive_to_zero( ...
+        subs(bp_stability_ineqs{i}, 'g', 0) ...
+      ) ...
+    );
+  end
+  
+  fprintf('方策%dが自律的安定である条件: %s\n', policy_index, simplify(condition));
   disp('-----------------------------');
 end

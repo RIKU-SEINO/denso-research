@@ -285,8 +285,7 @@ classdef MathUtils
       try
         result = isAlways(expr, 'Unknown', 'error');
       catch
-        fprintf('%sの厳密な証明に失敗したので、数値検証を行います\n', char(expr));
-        num_samples = 1e2;
+        num_samples = 2e2;
         vars = symvar(expr);
         vals_mat = zeros(num_samples, length(vars));
         for i = 1:length(vars)
