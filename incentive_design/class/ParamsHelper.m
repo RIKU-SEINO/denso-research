@@ -444,5 +444,18 @@ classdef ParamsHelper
         expr = expr & (sum_of_incentives == 0);
       end
     end
+
+    function expr = set_incentive_to_zero(expr)
+      % インセンティブに関するシンボリック変数をすべて0に置き換える
+      %
+      % Parameters:
+      %   expr (sym): シンボリックな式
+      %
+      % Returns:
+      %   expr (sym): インセンティブを0に置き換えた式
+
+      all_incentives = ParamsHelper.get_all_incentives_as_vector();
+      expr = subs(expr, all_incentives, zeros(1, length(all_incentives)));
+    end
   end
 end
