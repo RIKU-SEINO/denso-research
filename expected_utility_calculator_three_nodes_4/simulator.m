@@ -8,7 +8,12 @@ player_set_initial = PlayerSet({
 });
 
 all_possible_policies = Policy.get_all_possible_policies();
-colors = jet(length(all_possible_policies));
+M = length(all_possible_policies); % おそらく M=12
+colors = jet(M);
+pink_rgb = [1, 105/255, 180/255]; 
+if size(colors, 1) >= 8
+  colors(8,:) = pink_rgb;
+end
 
 passengers = Player.get_all_possible_passengers();
 
