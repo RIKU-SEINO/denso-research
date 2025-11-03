@@ -219,7 +219,7 @@ classdef ParamsHelper
             1, 0, 0];
       
       % 割引率
-      g = 0.95;
+      g = 0;
 
       % 一般の場合はtrans_prob_vecを使う
       % q = ParamsHelper.trans_prob_vec(p, p_);
@@ -367,19 +367,16 @@ classdef ParamsHelper
       expr = subs(expr, all_symbolic_params, all_valued_params);
     end
 
-    function expr = evaluate_params(expr, params, is_exclude_mode)
-      % シンボリックな式について、指定したパラメータを評価するか、指定したパラメータ以外を評価するかを選択し、それに応じて式を評価する。
-      % ただし、インセンティブは常に評価しない仕様になっている。
-      % 次に例を示す。ただし、all_symbolic_params=["x", "y"], all_valued_params=[1,2]のケースを考える。
-      % ex1. expr=x+y, params=["x"], is_exclude_mode=false: expr=1+y
-      % ex2. expr=x+y, params=["x"], is_exclude_mode=true: expr=x+2
+    function [symbolic_params, valued_params] = get_symbolic_and_valued_params(params, is_exclude_mode)
+      % 指定したパラメータ/指定していないパラメータをシンボリックと数値の両方で取得
       % 
       % Parameters:
-      %   expr (sym): シンボリックな式
-      %   params (sym): 評価対象のパラメータ
-      %   is_exclude_mode (logical): trueなら指定パラメータを除外して評価、falseなら指定パラメータのみ評価
+      %   params (cell<char>): パラメータを文字列のcell配列で指定
+      %   is_exclude_mode (logical): trueなら指定パラメータを除外して取得、falseなら指定パラメータのみ取得
+      %
       % Returns:
-      %   expr (sym): パラメータを数値的に評価した式。変数や未評価のパラメータはsymbolicのまま
+      %   symbolic_params (sym): シンボリックなパラメータの配列
+      %   valued_params (double): 数値に変換したパラメータの配列
       all_symbolic_params = ParamsHelper.all_symbolic_params();
       all_valued_params = ParamsHelper.all_valued_params();
 
@@ -408,8 +405,25 @@ classdef ParamsHelper
       end
 
       % 対応するsymbolic-paramとその数値を抽出
-      target_symbolic_params = all_symbolic_params(is_target);
-      target_valued_params   = all_valued_params(is_target);
+      symbolic_params = all_symbolic_params(is_target);
+      valued_params   = all_valued_params(is_target);
+    end
+
+    function expr = evaluate_params(expr, params, is_exclude_mode)
+      % シンボリックな式について、指定したパラメータを評価するか、指定したパラメータ以外を評価するかを選択し、それに応じて式を評価する。
+      % ただし、インセンティブは常に評価しない仕様になっている。
+      % 次に例を示す。ただし、all_symbolic_params=["x", "y"], all_valued_params=[1,2]のケースを考える。
+      % ex1. expr=x+y, params=["x"], is_exclude_mode=false: expr=1+y
+      % ex2. expr=x+y, params=["x"], is_exclude_mode=true: expr=x+2
+      % 
+      % Parameters:
+      %   expr (sym): シンボリックな式
+      %   params (sym): 評価対象のパラメータ
+      %   is_exclude_mode (logical): trueなら指定パラメータを除外して評価、falseなら指定パラメータのみ評価
+      % Returns:
+      %   expr (sym): パラメータを数値的に評価した式。変数や未評価のパラメータはsymbolicのまま
+      [target_symbolic_params, target_valued_params] = ...
+        ParamsHelper.get_symbolic_and_valued_params(params, is_exclude_mode);
 
       % 指定パラメータのみを数値に置き換え
       expr = subs(expr, target_symbolic_params, target_valued_params);

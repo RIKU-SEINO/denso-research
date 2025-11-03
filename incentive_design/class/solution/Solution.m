@@ -77,7 +77,35 @@ classdef Solution
       end
 
       obj_evaluated = obj.eval_by_key_value(obj2.variables, obj2.values);
+    end
 
+    function obj_evaluated = eval_all_params(obj)
+      % objのvaluesに含まれる全てのパラメータを数値的に評価する
+      %
+      % Parameters:
+      %   obj (Solution): 評価に使用するSolutionインスタンス
+      %
+      % Returns:
+      %   obj_evaluated (Solution): 評価されたSolution
+
+      params_symbolic = ParamsHelper.all_symbolic_params();
+      params_valued = ParamsHelper.all_valued_params();
+      obj_evaluated = obj.eval_by_key_value(params_symbolic, params_valued);
+    end
+
+    function obj_evaluated = eval_params(obj, params)
+      % objのvaluesに含まれる指定したパラメータを数値的に評価する
+      %
+      % Parameters:
+      %   obj (Solution): 評価に使用するSolutionインスタンス
+      %   params (cell<char>): 評価対象のパラメータを文字列のcell配列で指定
+      %
+      % Returns:
+      %   obj_evaluated (Solution): 評価されたSolution
+
+      [target_symbolic_params, target_valued_params] = ...
+        ParamsHelper.get_symbolic_and_valued_params(params, false);
+      obj_evaluated = obj.eval_by_key_value(target_symbolic_params, target_valued_params);
     end
 
     function result = has_only_numeric_values(obj)
