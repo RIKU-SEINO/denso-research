@@ -304,16 +304,88 @@ classdef PlayerPair
             player, ...
             expected_utility_solutions{current_policy_index} ...
           ); % 期待効用の計算結果のセル配列の順番は、Policy.get_all_possible_policies()の順番と一致するので、current_policy_indexを指定する
-            expected_utility_under_other_policy = ParamsHelper.set_incentive_to_zero( ...
+          expected_utility_under_other_policy = ParamsHelper.set_incentive_to_zero( ...
+            VariablesHelper.get_solution_expected_utility( ...
+              player_set, ...
+              player, ...
+              expected_utility_solutions{other_policy_index} ...
+            ) ... % 期待効用の計算結果のセル配列の順番は、Policy.get_all_possible_policies()の順番と一致するので、other_policy_indexを指定する
+          ); % プラットフォーマが指示した方策current_policyに従わない場合, インセンティブを付与しない
+          expr_ = or(expr_, expected_utility_under_other_policy <= expected_utility_under_current_policy); % 現行の方策pi'の方が好ましいプレイヤが一人でもいれば良いのでorで繋ぐ
+        end
+        expr = and(expr, expr_); % 全ての方策についてexpr_がtrueである必要があるので、andで繋ぐ
+      end
+    end
+
+    function expr = non_ebp_condition(obj, player_set, current_policy, expected_utility_solutions)
+      % プレイヤペアobjが、プレイヤ集合player_setにおいて、方策current_policyの下でEBPとならない条件式を取得する
+      %
+      % Parameters:
+      %   obj (PlayerPair): プレイヤペア
+      %   player_set (cell<Player>): プレイヤ集合
+      %   current_policy (Policy): 方策
+      %   expected_utility_solutions (cell<ExpectedUtilitySolution>): すべての方策ごとに計算された期待効用の計算結果。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
+      %
+      % Returns:
+      %   expr (sym): プレイヤペアobjが、プレイヤ集合player_setにおいて、方策current_policyの下でEBPとならない条件式
+
+      expr = symtrue;
+
+      % 1. 検査対象のペアに含まれるプレイヤの数が1以下の場合は、検査対象のペアobjは必ずEBPである
+      if length(obj.players) <= 1
+        return;
+      end
+
+      % 2. 検査対象のペアが現在のマッチングに含まれている場合は、検査対象のペアobjは必ずEBPである
+      current_player_matching = current_policy.get_player_matching_by_player_set(player_set);
+      if current_player_matching.has(obj)
+        return;
+      end
+
+      % 3. ある方策pi'≠current_policyを考える。
+      %   a.その方策の下でのマッチングに検査対象のペアobjが含まれており、
+      %   b.かつ検査対象のペアobjに含まれるすべてのプレイヤにとってpi'の方が期待効用が高い
+      % この両方を満たす方策pi'が存在しない場合、検査対象のペアobjはEBPである
+      current_policy_index = current_policy.index();
+      all_possible_policies = Policy.get_all_possible_policies();
+      for i = 1:length(all_possible_policies)
+        other_policy = all_possible_policies{i};
+        if isequal(other_policy, current_policy) % 同じ方策はスキップ
+          continue;
+        end
+
+        other_player_matching = other_policy.get_player_matching_by_player_set(player_set);
+        if ~other_player_matching.has(obj) % 検査対象のペアobjがother_policyの下でのマッチングに含まれていないなら、aを満たさないのでother_policyはスキップ
+          continue;
+        end
+
+        % ここまで来ると、検査対象のペアobjは、player_setにおいて、
+        % current_policyの下では組まれない（2.）のに対して、other_policyの下では組まれることになる。
+        % つまり、検査対象のペアobjは、player_setにおいて、other_policyの下でEBPとなる可能性がある。
+
+        other_policy_index = other_policy.index();
+
+        sum_of_expected_utility_in_pair_under_current_policy = 0;
+        sum_of_expected_utility_in_pair_under_other_policy = 0;
+        for j = 1:length(obj.players)
+          player = obj.players{j};
+          sum_of_expected_utility_in_pair_under_current_policy = ...
+            sum_of_expected_utility_in_pair_under_current_policy + ...
+              VariablesHelper.get_solution_expected_utility( ...
+                player_set, ...
+                player, ...
+                expected_utility_solutions{current_policy_index} ...
+              );
+          sum_of_expected_utility_in_pair_under_other_policy = ...
+            sum_of_expected_utility_in_pair_under_other_policy + ...
               VariablesHelper.get_solution_expected_utility( ...
                 player_set, ...
                 player, ...
                 expected_utility_solutions{other_policy_index} ...
-              ) ... % 期待効用の計算結果のセル配列の順番は、Policy.get_all_possible_policies()の順番と一致するので、other_policy_indexを指定する
-            ); % プラットフォーマが指示した方策current_policyに従わない場合, インセンティブを付与しない
-          expr_ = or(expr_, expected_utility_under_other_policy <= expected_utility_under_current_policy); % 現行の方策pi'の方が好ましいプレイヤが一人でもいれば良いのでorで繋ぐ
+              );
         end
-        expr = and(expr, expr_); % 全ての方策についてexpr_がtrueである必要があるので、andで繋ぐ
+        expr_ = sum_of_expected_utility_in_pair_under_other_policy <= sum_of_expected_utility_in_pair_under_current_policy; % 現行の方策pi' でのペア内の期待効用の合計が、other_policyの下でのペア内の期待効用の合計よりも高くなればother_policyへと逸脱することができない
+        expr = and(expr, expr_); % 全ての方策について、expr_がtrueである必要があるので、andで繋ぐ
       end
     end
   end
