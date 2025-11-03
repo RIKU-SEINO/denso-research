@@ -151,7 +151,7 @@ classdef ResultVisualizer
           adjusted_value = min(max(max(expected_utilities), 0), max_value) + max_value*0.1;
           for j = 1:length(all_possible_players)
             text(j, adjusted_value, sprintf('%.0f', expected_utilities(j)), ...
-              'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7,  'Rotation', 0); 
+              'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 7, 'FontWeight', 'bold', 'Rotation', 0); 
           end
         end
         sgtitle(['\pi_{', num2str(policy_index), '}', optimal_str, 'の下での期待効用'], ...
