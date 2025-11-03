@@ -219,7 +219,7 @@ classdef ParamsHelper
             1, 0, 0];
       
       % 割引率
-      g = 0;
+      g = 0.95; % analyzer.mでのマッチング安定性分析を行う際は g = 0 とすることを推奨する（計算量が爆発するため）。
 
       % 一般の場合はtrans_prob_vecを使う
       % q = ParamsHelper.trans_prob_vec(p, p_);
