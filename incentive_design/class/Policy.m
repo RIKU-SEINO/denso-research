@@ -133,11 +133,12 @@ classdef Policy
       player_matching = obj.player_matchings{idx};
     end
 
-    function expr = bp_stability_condition(obj, expected_utility_solutions)
-      % 指定した方策objがBP安定であるための条件式を取得する
+    function expr = stability_condition(obj, stability_type, expected_utility_solutions)
+      % 指定した方策objが安定であるための条件式を取得する。安定性の種類はstability_typeで指定する。
       %
       % Parameters:
       %   obj (Policy): Policy インスタンス
+      %   stability_type (string): 安定性の種類。'BP' または 'EBP' のいずれか
       %   expected_utility_solutions (cell<struct>): すべての方策ごとに計算された期待効用の計算結果のセル配列。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
       %
       % Returns:
@@ -146,8 +147,12 @@ classdef Policy
       expr = symtrue;
       for i = 1:length(obj.player_matchings)
         player_matching = obj.player_matchings{i};
-        bp_stability_condition_expr = player_matching.bp_stability_condition(obj, expected_utility_solutions);
-        expr = and(expr, bp_stability_condition_expr);
+        stability_condition_expr = player_matching.stability_condition( ...
+          stability_type, ...
+          obj, ...
+          expected_utility_solutions ...
+        );
+        expr = and(expr, stability_condition_expr);
       end
     end
   end

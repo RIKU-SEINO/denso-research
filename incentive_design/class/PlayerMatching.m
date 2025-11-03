@@ -366,16 +366,18 @@ classdef PlayerMatching
       expr = subs(expr, solution.variables, solution.values);
     end
 
-    function expr = bp_stability_condition(obj, current_policy, expected_utility_solutions)
-      % 指定したマッチングobjが方策current_policyの下でBP安定であるための条件式を取得する
+    function expr = stability_condition(obj, stability_type, current_policy, expected_utility_solutions)
+      % 指定したマッチングobjが方策current_policyの下で安定であるための条件式を取得する。
+      % 安定性の種類はstability_typeで指定する。
       %
       % Parameters:
       %   obj (PlayerMatching): PlayerMatching インスタンス
+      %   stability_type (string): 安定性の種類。'BP' または 'EBP' のいずれか
       %   current_policy (Policy): 現在の方策
       %   expected_utility_solutions (cell<ExpectedUtilitySolution>): すべての方策ごとに計算された期待効用の計算結果。セル配列の順番は、Policy.get_all_possible_policies()の順番と一致する。
       %
       % Returns:
-      %   expr (sym): 指定したマッチングobjが方策current_policyの下でBP安定であるための条件式
+      %   expr (sym): 指定したマッチングobjが方策current_policyの下で安定であるための条件式
 
       expr = symtrue;
       player_set = obj.get_player_set_before_matching();
@@ -386,12 +388,23 @@ classdef PlayerMatching
           continue;
         end
 
-        non_bp_condition_expr = player_pair.non_bp_condition( ...
-          player_set, ...
-          current_policy, ...
-          expected_utility_solutions ...
-        );
-        expr = and(expr, non_bp_condition_expr);
+        if strcmp(stability_type, 'BP')
+          non_bp_condition_expr = player_pair.non_bp_condition( ...
+            player_set, ...
+            current_policy, ...
+            expected_utility_solutions ...
+          );
+          expr = and(expr, non_bp_condition_expr);
+        elseif strcmp(stability_type, 'EBP')
+          non_ebp_condition_expr = player_pair.non_ebp_condition( ...
+            player_set, ...
+            current_policy, ...
+            expected_utility_solutions ...
+          );
+          expr = and(expr, non_ebp_condition_expr);
+        else
+          error('安定性タイプの指定が不正です。''BP''または''EBP''を指定してください。指定されたタイプ: %s', stability_type);
+        end
       end
     end
   end

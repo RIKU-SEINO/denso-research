@@ -2,7 +2,10 @@ clc; clear; close all;
 addpath('./class')
 addpath('./class/solution')
 
+%%%% EDIT HERE %%%%
 target_data = 'result/symbolic_data.mat';
+stability_type = 'EBP'; % 'BP' または 'EBP' のいずれか
+%%%%%%%%%%%%%%%%%%%
 
 % 1. データの読み込み
 if exist(target_data, 'file')
@@ -16,27 +19,32 @@ else
   error('データが存在しません');
 end
 
-variables = ParamsHelper.get_all_incentives_as_vector();
+% 2. パラメータを数値的に評価したSolutionを作成する
+fprintf('パラメータを数値的に評価したSolutionを作成します\n');
+for i = 1:length(policies)
+  state_value_solutions{i} = state_value_solutions{i}.eval_all_params();
+  expected_utility_solutions{i} = expected_utility_solutions{i}.eval_all_params();
+end
+fprintf('パラメータを数値的に評価したSolutionを作成しました\n');
 
-% 目的関数（インセンティブの二乗和）
-f_sym = sum(arrayfun(@(x) x^2, variables));
-
-% 2. 最適化問題の実行
+% 3. 最適化問題の実行
+variables = ParamsHelper.get_all_incentives_as_vector(); % 決定変数
+f_sym = sum(arrayfun(@(x) x^2, variables)); % 目的関数
 for i = 1:length(policies)
   policy = policies{i};
   % 制約条件1. policyが最適方策となるための不等式制約
   optimality_ineq = policy.optimality_condition(state_value_solutions);
-  % 制約条件2. policyがBP安定となるための不等式制約
-  bp_stability_ineqs = MathUtils.expand_or_optimized( ...
-    policy.bp_stability_condition(expected_utility_solutions) ...
+  % 制約条件2. policyが安定となるための不等式制約
+  stability_ineqs = MathUtils.expand_or_optimized( ...
+    policy.stability_condition(stability_type, expected_utility_solutions) ...
   );
   % 制約条件3. インセンティブの収支を満たすための等式制約
   incentive_eq = ParamsHelper.incentive_condition();
 
   fprintf('方策%dについてインセンティブ最適化を行います\n', i);
-  problems = cell(length(bp_stability_ineqs), 1);
-  for j = 1:length(bp_stability_ineqs)
-    ineq = and(optimality_ineq, bp_stability_ineqs{j});
+  problems = cell(length(stability_ineqs), 1);
+  for j = 1:length(stability_ineqs)
+    ineq = and(optimality_ineq, stability_ineqs{j});
     problems{j} = OptimizationProblem( ...
       variables, ... % 決定変数
       f_sym, ... % 目的関数
