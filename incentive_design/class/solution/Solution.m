@@ -108,6 +108,22 @@ classdef Solution
       obj_evaluated = obj.eval_by_key_value(target_symbolic_params, target_valued_params);
     end
 
+    function obj_evaluated = set_incentive_to_zero(obj)
+      % objのインセンティブu_s__pを全て0にする
+      %
+      % Parameters:
+      %   obj (Solution): インセンティブを0にするSolutionインスタンス
+      %
+      % Returns:
+      %   obj_evaluated (Solution): インセンティブを0にしたSolutionインスタンス
+
+      all_incentives = ParamsHelper.get_all_incentives_as_vector();
+      obj_evaluated = obj.eval_by_key_value( ...
+        all_incentives, ...
+        zeros(1, length(all_incentives)) ...
+      );
+    end
+
     function result = has_only_numeric_values(obj)
       % objの値が全て数値であるかどうかを返す。
       % ただし、valuesにsymが含まれていても、そのsymが数値になる場合はtrueを返す。

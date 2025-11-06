@@ -30,7 +30,7 @@ fprintf('パラメータを数値的に評価したSolutionを作成しました
 % 3. 最適化問題の実行
 variables = ParamsHelper.get_all_incentives_as_vector(); % 決定変数
 f_sym = sum(arrayfun(@(x) x^2, variables)); % 目的関数
-for i = 1:length(policies)
+for i = 8:length(policies)
   policy = policies{i};
   % 制約条件1. policyが最適方策となるための不等式制約
   optimality_ineq = policy.optimality_condition(state_value_solutions);
@@ -59,12 +59,21 @@ for i = 1:length(policies)
   if OptimizationProblem.is_success(result)
     incentive_solution = Solution.to_solution(variables, result.x);
     % 最適化されたインセンティブを用いて、全ての方策について期待効用を計算する
-    evaluated_expected_utility_solutions = cell(length(policies), 1);
+    evaluated_expected_utility_solutions_without_incentive = cell(length(policies), 1);
+    evaluated_expected_utility_solutions_with_optimized_incentive = cell(length(policies), 1);
     for j = 1:length(policies)
-      evaluated_expected_utility_solutions{j} = ...
+      evaluated_expected_utility_solutions_without_incentive{j} = ...
+        expected_utility_solutions{j}.set_incentive_to_zero();
+
+      evaluated_expected_utility_solutions_with_optimized_incentive{j} = ...
         expected_utility_solutions{j}.eval_by_solution(incentive_solution);
     end
-    ExpectedUtilitySolution.visualize(evaluated_expected_utility_solutions);
+    ExpectedUtilitySolution.visualize(evaluated_expected_utility_solutions_without_incentive);
+    ExpectedUtilitySolution.visualize(evaluated_expected_utility_solutions_with_optimized_incentive);
+
+    fprintf('最適化されたインセンティブを用いて、全ての方策について期待効用を計算しました\n');
+    fprintf('次の方策に進む場合は、Enterキーを押してください\n');
+    pause;
   end
 end
 
