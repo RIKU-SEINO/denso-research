@@ -8,7 +8,7 @@ target_data = 'result/symbolic_data.mat';
 stability_type = 'EBP'; % 'BP' または 'EBP' のいずれか
 should_analyze_stabilizability = true; % 安定化可能条件の導出を行うかどうか
 should_analyze_self_stability = true; % 自律的安定条件の導出を行うかどうか
-params_to_evaluate = {'g'}; % 数値的に評価するパラメータを文字列のcell配列で指定。分析時は ParamsHelper.all_valued_params()で g = 0 とすることを推奨する（計算量が爆発するため）。
+params_to_evaluate = {'g'}; % 数値的に評価するパラメータを文字列のcell配列で指定。
 %%%%%%%%%%%%%%%%%%%
 
 % 1. データの読み込み
