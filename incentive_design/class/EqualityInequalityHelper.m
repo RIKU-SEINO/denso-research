@@ -76,6 +76,7 @@ classdef EqualityInequalityHelper
         new_row_idx = 1;
         for i = 1:length(U_idx)
           for j = 1:length(L_idx)
+            fprintf('i: %d, j: %d\n', i, j);
             u_row = M(U_idx(i), :); % 上限を与える行
             l_row = M(L_idx(j), :); % 下限を与える行
             
@@ -107,19 +108,45 @@ classdef EqualityInequalityHelper
       condition = simplify(condition);
     end
 
+    function [A_mixed, b_mixed] = get_mixed_matrix(A_eq, b_eq, A_ineq, b_ineq)
+      % 等式と不等式の混合制約の行列を取得
+      %
+      % Parameters:
+      %   A_eq (double[] | sym[]): 等式制約の係数行列
+      %   b_eq (sym[]): 等式制約の定数項
+      %   A_ineq (double[] | sym[]): 不等式制約の係数行列
+      %   b_ineq (sym[]): 不等式制約の定数項
+      
+      % 入力がシンボリックまたは数値行列であることを確認
+      if ~(isa(A_eq, 'sym') || isnumeric(A_eq))
+        error('A_eqはシンボリックまたは数値行列である必要があります。実際の型: %s', class(A_eq));
+      end
+      if ~(isa(b_eq, 'sym') || isnumeric(b_eq))
+        error('b_eqはシンボリックまたは数値行列である必要があります。実際の型: %s', class(b_eq));
+      end
+      if ~(isa(A_ineq, 'sym') || isnumeric(A_ineq))
+        error('A_ineqはシンボリックまたは数値行列である必要があります。実際の型: %s', class(A_ineq));
+      end
+      if ~(isa(b_ineq, 'sym') || isnumeric(b_ineq))
+        error('b_ineqはシンボリックまたは数値行列である必要があります。実際の型: %s', class(b_ineq));
+      end
+      
+      A_mixed = [A_eq; -A_eq; A_ineq];
+      b_mixed = [b_eq; -b_eq; b_ineq];
+    end
+
     function condition = get_mixed_feasibility_condition(A_eq, b_eq, A_ineq, b_ineq)
       % 等式と不等式の混合制約の可解条件を、純粋な不等式問題に変換して求める
       %
       % Parameters:
       %   (各引数は数値行列またはシンボリック)
 
-      % 等式制約 A_eq * x=b_eq を、
-      % A_eq * x<=b_eq と -A_eq * x<=-b_eq という2つの不等式制約に分解
-      A = [A_eq; -A_eq; A_ineq];
-      b = [b_eq; -b_eq; b_ineq];
+      [A_mixed, b_mixed] = EqualityInequalityHelper.get_mixed_matrix( ...
+        A_eq, b_eq, A_ineq, b_ineq ...
+      );
 
       % 純粋な不等式系のソルバーを呼び出す
-      condition = EqualityInequalityHelper.get_inequality_feasibility_condition(A, b);
+      condition = EqualityInequalityHelper.get_inequality_feasibility_condition(A_mixed, b_mixed);
     end
   end
 end
