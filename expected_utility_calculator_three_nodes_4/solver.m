@@ -1,10 +1,19 @@
 clc; clear; close all;
 addpath('./class')
 addpath('./func')
-mkdir 'result'
 mkdir 'func'
 
+% 割引率 g から、結果保存用のディレクトリ名を決定
+[~, ~, ~, ~, ~, ~, ~, ~, ~, ~, ~, g, ~, ~, ~] = ParamsHelper.get_valued_params();
+g_dir_suffix = sprintf('%03d', round(g * 100));        % 0   -> '000', 0.95 -> '095'
+result_g_dir = sprintf('result_g_%s', g_dir_suffix);   % 例: 'result_g_000'
+if ~exist(result_g_dir, 'dir')
+  mkdir(result_g_dir);
+end
+
 % 0. 計算モードの選択
+fprintf('割引率 g: %f\n', g);
+fprintf('結果保存ディレクトリ: %s\n', result_g_dir);
 disp('計算モードを選択してください:');
 disp('1: 数値計算モード');
 disp('2: シンボリック計算モード');
@@ -12,14 +21,14 @@ disp('3: 両方実行');
 calc_mode = input('モードを選択 (1/2/3): ');
 
 % 0-1. すでに計算結果がある場合はロードする（数値計算モードの場合）
-if exist('result/data.mat', 'file')
+if exist(fullfile(result_g_dir, 'data.mat'), 'file')
   disp('すでに数値計算結果が存在します。再計算しますか？ (y/n): ')
   data_regenerate_numeric = input('', 's');
 else
   data_regenerate_numeric = 'y';
 end
 
-if exist('result/symbolic_data.mat', 'file')
+if exist(fullfile(result_g_dir, 'symbolic_data.mat'), 'file')
   disp('すでにシンボリック計算結果が存在します。再計算しますか？ (y/n): ')
   data_regenerate_symbolic = input('', 's');
 else
@@ -56,12 +65,13 @@ if calc_mode == 1 || calc_mode == 3
     end
 
     % 3. 結果の保存
-    if exist('result/data.mat', 'file')
-      delete('result/data.mat');
+    if exist(fullfile(result_g_dir, 'data.mat'), 'file')
+      delete(fullfile(result_g_dir, 'data.mat'));
     end
-    save('result/data.mat', 'optimal_state_value_solution', 'optimal_policy', 'state_value_solutions', 'expected_utility_solutions', 'is_optimal');
+    % 共通ディレクトリ(result)と、割引率ごとのディレクトリ(result_g_xxx)の両方に保存
+    save(fullfile(result_g_dir, 'data.mat'), 'optimal_state_value_solution', 'optimal_policy', 'state_value_solutions', 'expected_utility_solutions', 'is_optimal');
   else
-    data = load('result_g_095/data.mat');
+    data = load(fullfile(result_g_dir, 'data.mat'));
     policies = Policy.get_all_possible_policies();
     optimal_state_value_solution = data.optimal_state_value_solution;
     optimal_policy = data.optimal_policy;
@@ -90,12 +100,13 @@ if calc_mode == 2 || calc_mode == 3
     end
   
     % シンボリック計算結果の保存
-    if exist('result/symbolic_data.mat', 'file')
-      delete('result/symbolic_data.mat');
+    if exist(fullfile(result_g_dir, 'symbolic_data.mat'), 'file')
+      delete(fullfile(result_g_dir, 'symbolic_data.mat'));
     end
-    save('result/symbolic_data.mat', 'state_value_solutions_symbolic', 'expected_utility_solutions_symbolic');
+    % 共通ディレクトリ(result)と、割引率ごとのディレクトリ(result_g_xxx)の両方に保存
+    save(fullfile(result_g_dir, 'symbolic_data.mat'), 'state_value_solutions_symbolic', 'expected_utility_solutions_symbolic');
   else
-    data = load('result_g_095/symbolic_data.mat');
+    data = load(fullfile(result_g_dir, 'symbolic_data.mat'));
     state_value_solutions_symbolic = data.state_value_solutions_symbolic;
     expected_utility_solutions_symbolic = data.expected_utility_solutions_symbolic;
   end
@@ -107,10 +118,11 @@ if calc_mode == 1 || calc_mode == 3
   % ResultVisualizer.display_state_values_as_graphs(state_value_solutions, policies, is_optimal);
 
   % 4-2. プレイヤ集合の状態価値関数を棒グラフとして表示
-  ResultVisualizer.display_state_values_as_bar(state_value_solutions, is_optimal);
+  %     => 割引率 g を渡して、保存先ディレクトリ(result_g_xxx)を同期させる
+  ResultVisualizer.display_state_values_as_bar(state_value_solutions, g);
 
-  % 4-3. プレイヤ/プレイヤ集合の期待効用をグラフとして表示
-  ResultVisualizer.display_expected_utilities_as_bar(expected_utility_solutions, is_optimal);
+  % % 4-3. プレイヤ/プレイヤ集合の期待効用をグラフとして表示
+  % ResultVisualizer.display_expected_utilities_as_bar(expected_utility_solutions, is_optimal);
 end
 
 % % 5. シンボリック計算結果の表示（シンボリック計算モードが選択された場合のみ）
