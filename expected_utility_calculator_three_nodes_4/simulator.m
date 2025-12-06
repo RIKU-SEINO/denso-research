@@ -8,91 +8,21 @@ player_set_initial = PlayerSet({
 });
 
 all_possible_policies = Policy.get_all_possible_policies();
-M = length(all_possible_policies); % おそらく M=12
-colors = jet(M);
-pink_rgb = [1, 105/255, 180/255]; 
-if size(colors, 1) >= 8
-  colors(8,:) = pink_rgb;
-end
+M = length(all_possible_policies); % M=12（方策の総数）
 
 passengers = Player.get_all_possible_passengers();
 
-% --- Social Utility Figure ---
-figure(1); hold on;
-xlabel('time step'); ylabel('utility');
-
-% --- Taxi Utility Figure ---
-figure(2); hold on;
-xlabel('time step'); ylabel('utility');
-
-for i = 1:length(passengers)
-  passenger = passengers{i};
-  figure(2+i);
-  xlabel('time step'); ylabel('utility');
-end
-
-% --- Passenger Utility Figures ---
-% WIP
+% --- Run Simulation ---
+simulation_results = cell(1, M);
 
 for policy_index = 1:length(all_possible_policies)
   policy = all_possible_policies{policy_index};
   result = simulate(policy, player_set_initial);
-
-  cs = result.utilities_social_cumulative;
-  ct = result.utilities_taxi_cumulative;
-  hp = result.utilities_passengers;
-  tspan = 0:length(cs)-1;
-
-  % 図1：Social Utility
-  figure(1);
-  plot(tspan, cs, 'LineWidth', 2, 'Color', colors(policy_index, :));
-
-  % 図2：Taxi Utility
-  figure(2);
-  plot(tspan, ct, 'LineWidth', 2, 'Color', colors(policy_index, :));
-
-  % 図3〜: Passenger Utility  
-  for i = 1:length(passengers)
-    passenger = passengers{i};
-    utilities_passenger = hp(passenger.label);
-    figure(2+i);
-    hold on;
-    plot(tspan, cumsum(utilities_passenger), 'LineWidth', 2, 'Color', colors(policy_index, :));
-  end
+  simulation_results{policy_index} = result;
 end
 
-% scale
-ymax = -inf;
-ymin = inf;
-
-figHandles = findall(0, 'Type', 'figure'); % 開いてるすべてのfigureを取得
-
-for i = 1:length(figHandles)
-    figure(figHandles(i));
-    ax = gca; % 現在のaxes
-    lines = findall(ax, 'Type', 'line'); % figure内の全lineオブジェクト
-    for j = 1:length(lines)
-        ydata = get(lines(j), 'YData');
-        ymax = max([ymax, max(ydata)]);
-        ymin = min([ymin, min(ydata)]);
-    end
-end
-
-% --- 全てのfigureのscaleを揃える
-for i = 1:length(figHandles)
-    figure(figHandles(i));
-    ylim([ymin, ymax]);
-end
-
-legend_labels = arrayfun(@(i) sprintf('\\pi_{%d}', i), 1:length(all_possible_policies), 'UniformOutput', false);
-figure(1); legend(legend_labels, 'Location', 'northwest', 'Interpreter', 'tex'); grid on;
-exportgraphics(figure(1), 'simulation_result/social_utility_cumulative.eps');
-figure(2); legend(legend_labels, 'Location', 'northwest', 'Interpreter', 'tex'); grid on;
-exportgraphics(figure(2), 'simulation_result/taxi_utility_cumulative.eps');
-for i = 1:length(passengers)
-  figure(2+i); legend(legend_labels, 'Location', 'northwest', 'Interpreter', 'tex'); grid on;
-  exportgraphics(figure(2+i), sprintf('simulation_result/passenger_%s_utility_cumulative.eps', passengers{i}.label));
-end
+% --- Visualize Results ---
+ResultVisualizer.display_simulation_results(simulation_results, all_possible_policies, passengers);
 
 function result = simulate(policy, player_set_initial)
   player_set = player_set_initial;

@@ -523,6 +523,21 @@ classdef PlayerSet
         labels{i} = player_sets{i}.latex_label();
       end
     end
+
+    function labels = latex_labels_indexed(player_sets)
+      % プレイヤ集合のインデックス付きLaTeXラベル一覧を取得する
+      %
+      % Parameters:
+      %   player_sets (cell<PlayerSet>): プレイヤ集合の配列
+      %
+      % Returns:
+      %   labels (cell<char>): プレイヤ集合のインデックス付きラベルの配列
+
+      labels = cell(length(player_sets), 1);
+      for i = 1:length(player_sets)
+        labels{i} = sprintf('$$s_{%d}$$', i);
+      end
+    end
     
     function all_taxi_sets = get_all_taxis_sets()
       % 全てのタクシーの集合を取得する
