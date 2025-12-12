@@ -156,6 +156,29 @@ classdef PlayerMatching
       end
     end
 
+    function players = get_unmatched_players(obj)
+      % このマッチングでマッチしない全てのプレイヤを取得する。
+      % ただし、そもそもプレイヤ集合に属していないプレイヤは除かれる。
+      %
+      % Parameters:
+      %   obj (PlayerMatching): PlayerMatching インスタンス
+      %
+      % Returns:
+      %   players (cell<Player>): このマッチングでマッチしない全てのプレイヤのセル配列
+
+      players = {};
+      for i = 1:length(obj.player_pairs)
+        player_pair = obj.player_pairs{i};
+        if player_pair.is_unmatched()
+          % 対象のプレイヤペアについてforを回しているので、そもそもプレイヤ集合に属していないプレイヤは除枯れる
+          players_in_player_pair = player_pair.players;
+          for j = 1:length(players_in_player_pair)
+            players{end + 1} = players_in_player_pair{j};
+          end
+        end
+      end
+    end
+
     function player_after_matching = get_player_after_matching(obj, player)
       % 指定したプレイヤがマッチング後にどのプレイヤになるかを取得する
       %

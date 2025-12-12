@@ -89,23 +89,39 @@ classdef Policy
       label = char(strjoin(string(labels), ', '));
     end
 
+    function label_latex_indexed = latex_label_indexed(obj)
+      % Policyのインデックス付きLaTeXラベルを取得する
+      %
+      % Returns:
+      %   label_latex_indexed (string): Policyのインデックス付きLaTeXラベル
+
+      label_latex_indexed = ['$\pi_{', num2str(obj.index()), '}$'];
+    end
+
     function index = index(obj)
       % Policyのインデックスを取得する
       %
       % Returns:
       %   index (int): Policyのインデックス
 
-      index = -1;
-      all_possible_policies = Policy.get_all_possible_policies();
-      for i = 1:length(all_possible_policies)
-        policy = all_possible_policies{i};
-        if strcmp(policy.id(), obj.id())
-            index = i;
-            break;
+      persistent policy_id_map;
+      
+      % 初回呼び出し時にマップを構築
+      if isempty(policy_id_map)
+        all_possible_policies = Policy.get_all_possible_policies();
+        policy_id_map = containers.Map( ...
+          'KeyType', 'char', ...
+          'ValueType', 'double' ...
+        );
+        for i = 1:length(all_possible_policies)
+          policy_id_map(all_possible_policies{i}.id()) = i;
         end
       end
-
-      if index < 0
+      
+      obj_id = obj.id();
+      if isKey(policy_id_map, obj_id)
+        index = policy_id_map(obj_id);
+      else
         error("Policy not found in all_possible_policies")
       end
     end
@@ -131,6 +147,24 @@ classdef Policy
 
       idx = player_set.index();
       player_matching = obj.player_matchings{idx};
+    end
+
+    function players = get_unmatched_players_by_player_set(obj, player_set)
+      % 指定したプレイヤ集合について、その集合に属するがマッチしないプレイヤを全て取得する
+      %
+      % Parameters:
+      %   obj (Policy): Policy インスタンス
+      %   player_set (PlayerSet): プレイヤ集合
+      %
+      % Returns:
+      %   players (cell<Player>): そのプレイヤ集合に属するがマッチしないプレイヤのセル配列
+
+      players = {};
+      player_matching = obj.get_player_matching_by_player_set(player_set);
+      unmatched_players = player_matching.get_unmatched_players();
+      for i = 1:length(unmatched_players)
+        players{end + 1} = unmatched_players{i};
+      end
     end
 
     function expr = stability_condition(obj, stability_type, expected_utility_solutions)
