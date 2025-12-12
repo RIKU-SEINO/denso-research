@@ -36,10 +36,8 @@ classdef ParamsHelper
             if ParamsHelper.should_create_incentive(player_set, player)
               syms(varname, 'real');
               u_cache(i, j) = eval(varname);
-              fprintf('Created incentive parameter: %s\n', varname);
             else
               u_cache(i, j) = sym(0);
-              fprintf('Skipped creating incentive parameter: %s\n', varname);
             end
           end
         end
@@ -65,6 +63,19 @@ classdef ParamsHelper
       incentives = incentives(is_not_zero);
     end
 
+    function incentives = get_incentives_as_vector(incentives_indices)
+      % 指定されたインセンティブのインデックスに対応するインセンティブを取得
+      %
+      % Parameters:
+      %   incentives_indices (int[]): インセンティブのインデックス
+      %
+      % Returns:
+      %   incentives (sym[]): インセンティブのシンボリック変数の配列
+      
+      ictv = ParamsHelper.get_all_incentives_as_vector();
+      incentives = ictv(incentives_indices);
+    end
+
     function num = get_num_of_incentives()
       % インセンティブの数を取得
       %
@@ -78,7 +89,7 @@ classdef ParamsHelper
     end
 
     function incentive = get_incentive(player_set, player)
-      % プレイヤ集合において、方策に従った時にプレイヤに付与するインセンティブを取得する
+      % プレイヤ集合において、プレイヤに付与するインセンティブを取得する
       %
       % Parameters:
       %   player_set (PlayerSet): プレイヤ集合
@@ -90,6 +101,41 @@ classdef ParamsHelper
 
       u = ParamsHelper.init_incentive();
       incentive = u(player_set.index(), player.index());
+    end
+
+    function [player, player_set] = get_player_and_player_set_from_incentive(incentive)
+      % インセンティブからプレイヤとプレイヤ集合を取得する
+      %
+      % Parameters:
+      %   incentive (symbolic): インセンティブ
+      %
+      % Returns:
+      %   player (Player): プレイヤ
+      %   player_set (PlayerSet): プレイヤ集合
+
+      u = ParamsHelper.init_incentive();
+      [player_set_index, player_index] = find(u == incentive);
+      player_set = PlayerSet.get_all_possible_player_sets{player_set_index};
+      player = Player.get_all_possible_players{player_index};
+    end
+
+    function label = incentive_latex_label(player_set, player)
+      % インセンティブのLaTeX形式のラベルを取得
+      %
+      % Parameters:
+      %   player_set (PlayerSet): プレイヤ集合
+      %   player (Player): プレイヤ
+      %
+      % Returns:
+      %   latex_label (string): インセンティブのLaTeX形式のラベル
+
+      label = strcat( ...
+        '$u_{\mathrm{', ...
+        player.latex_label(), ...
+        '}}(', ...
+        player_set.latex_label_indexed(), ...
+        ')$' ...
+      );
     end
 
     function [w, c, a, u_v_positive, u_v_negative, r, b, u_ps_positive, u_ps_negative, p, p_, g, q] = get_symbolic_params()
@@ -429,22 +475,49 @@ classdef ParamsHelper
       expr = subs(expr, target_symbolic_params, target_valued_params);
     end
 
-    function expr = incentive_condition()
+    function expr = positive_incentive_condition_to_unmatched_players(policy)
+      % 指定した方策policyについて、その方策に従った場合にマッチしないプレイヤに対して、インセンティブが0以上であることを制約する式を生成する
+      %
+      % Parameters:
+      %   policy (Policy): 方策
+      %
+      % Returns:
+      %   expr (sym): インセンティブが0以上であることを制約する式
+
+      all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
+      expr = symtrue;
+      for i = 1:length(all_possible_player_sets)
+        player_set = all_possible_player_sets{i};
+        unmatched_players = policy.get_unmatched_players_by_player_set(player_set);
+        for j = 1:length(unmatched_players)
+          player = unmatched_players{j};
+          if ParamsHelper.should_create_incentive(player_set, player)
+            incentive = ParamsHelper.get_incentive(player_set, player);
+            expr = expr & (incentive >= 0);
+          end
+        end
+      end
+    end
+
+    function [incentive_eq, incentive_ineq] = incentive_condition(policy, use_positive_incentive_condition)
       % インセンティブに関する制約式を生成する。これは、指定する方策ごとに制約式が異なることに注意。
       % 制約1. 各ステップのインセンティブの収支制約
       %    ・全てのプレイヤ集合について、そのプレイヤ集合に含まれる全てのプレイヤに配分するインセンティブの合計が0になることを制約とする。
-      % 制約2. インセンティブ付与時の即時報酬が
+      % 制約2.（オプション）マッチしないプレイヤに対して、インセンティブが0以上であることを制約する。
       %
-      % Parameters:
-      %   None
+      % Parameters: 
+      %   policy (Policy): 方策
+      %   use_positive_incentive_condition (logical): マッチしないプレイヤに対して、インセンティブが0以上であることを制約する場合は true, そうでない場合は false
       %
       % Returns:
-      %   expr (sym): インセンティブに関する制約式
+      %   incentive_eq (sym): インセンティブに関する等式制約式
+      %   incentive_ineq (sym): インセンティブに関する不等式制約式
 
       all_possible_player_sets = PlayerSet.get_all_possible_player_sets();
       all_possible_players = Player.get_all_possible_players();
 
-      expr = symtrue;
+      incentive_eq = symtrue;
+      incentive_ineq = symtrue;
       for i = 1:length(all_possible_player_sets)
         player_set = all_possible_player_sets{i};
         sum_of_incentives = sym(0);
@@ -455,7 +528,16 @@ classdef ParamsHelper
             sum_of_incentives = sum_of_incentives + incentive;
           end
         end
-        expr = expr & (sum_of_incentives == 0);
+        incentive_eq = incentive_eq & (sum_of_incentives == 0);
+      end
+
+      % マッチしないプレイヤに対して、インセンティブが0以上であることを制約する
+      if use_positive_incentive_condition
+        positive_incentive_condition = ...
+          ParamsHelper.positive_incentive_condition_to_unmatched_players(policy);
+        incentive_ineq = incentive_ineq & positive_incentive_condition;
+      else
+        incentive_ineq = symtrue;
       end
     end
 
