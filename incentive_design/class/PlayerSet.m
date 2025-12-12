@@ -126,6 +126,18 @@ classdef PlayerSet
       index = find(cellfun(@(x) isequal(x, obj), PlayerSet.get_all_possible_player_sets()));
     end
 
+    function latex_label_indexed = latex_label_indexed(obj)
+      % プレイヤーの集合のインデックス付きLaTeXラベルを取得する
+      %
+      % Parameters:
+      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
+      %
+      % Returns:
+      %   latex_label_indexed (string): プレイヤーの集合のインデックス付きLaTeXラベル
+
+      latex_label_indexed = ['s_{', num2str(obj.index()), '}'];
+    end
+
     function result = is_node_occupied_by_passenger(obj, node)
       % 指定したノードが乗客で占有されているか判定する
       %
