@@ -252,10 +252,11 @@ classdef ResultVisualizer
 
       % フォント設定
       font_name = 'Times New Roman'; 
-      font_size_xaxis = 18;           
-      font_size_yaxis = 18;
-      font_size_label = 24;
-      font_size_legend = 27;
+      font_size_xaxis = 42;           
+      font_size_yaxis = 42;
+      font_size_label = 42;
+      font_size_legend = 38;
+      line_width = 4;
 
       M = length(policies);
       colors = jet(M);
@@ -292,18 +293,18 @@ classdef ResultVisualizer
 
         % Plot Social Utility
         figure(f_social);
-        plot(tspan, cs, 'LineWidth', 2, 'Color', colors(policy_index, :));
+        plot(tspan, cs, 'LineWidth', line_width, 'Color', colors(policy_index, :));
 
         % Plot Taxi Utility
         figure(f_taxi);
-        plot(tspan, ct, 'LineWidth', 2, 'Color', colors(policy_index, :));
+        plot(tspan, ct, 'LineWidth', line_width, 'Color', colors(policy_index, :));
 
         % Plot Passenger Utilities
         for i = 1:length(passengers)
           passenger = passengers{i};
           utilities_passenger = hp(passenger.label);
           figure(f_passengers(i));
-          plot(tspan, cumsum(utilities_passenger), 'LineWidth', 2, 'Color', colors(policy_index, :));
+          plot(tspan, cumsum(utilities_passenger), 'LineWidth', line_width, 'Color', colors(policy_index, :));
         end
       end
 
