@@ -149,6 +149,15 @@ classdef PlayerPair
       result = obj.has_taxi() && obj.has_passenger();
     end
 
+    function result = is_unmatched(obj)
+      % プレイヤのペアがマッチングされていないか判定する
+      %
+      % Returns:
+      %   result (logical): マッチングされていない場合は true, そうでない場合は false
+
+      result = ~obj.is_matched();
+    end
+
     function result = is_unmatched_taxi(obj)
       % プレイヤのペアが未マッチのタクシーであるか判定する
       %
