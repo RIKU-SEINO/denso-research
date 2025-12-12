@@ -1,24 +1,52 @@
-clc; clear;
+clc; clear; close all;
 addpath('./class')
 addpath('./class/solution')
 addpath('./class/visualizer')
 
 %%%% EDIT HERE %%%%
-target_data = 'result/symbolic_data.mat';
 stability_type = 'EBP'; % 'BP' または 'EBP'
 policy_index = 8;
+use_positive_incentive_condition = true; % マッチしないプレイヤに対して、インセンティブが0以上であることを制約する場合は true, そうでない場合は false
+if use_positive_incentive_condition
+  with_or_without = 'with_positive_incentive_cons';
+else
+  with_or_without = 'without_positive_incentive_cons';
+end
+target_symbolic_data = 'result/symbolic_data.mat';
+target_optimizer_data = sprintf( ...
+  'result/optimizer/policy_%d_%s_%s.mat', ...
+  policy_index, ...
+  with_or_without, ...
+  stability_type ...
+);
+target_plot_dimensions = [3, 5, 7];
+plot_bound = 500; % 描画範囲の最大値（絶対値）
+label_offset = 550; % 軸線からラベルを離す距離
+
+target_plot_incentives = ...
+  ParamsHelper.get_incentives_as_vector(target_plot_dimensions);
+target_plot_incentives_latex_labels = cell(1, length(target_plot_incentives));
+for i = 1:length(target_plot_incentives)
+  [player, player_set] = ...
+    ParamsHelper.get_player_and_player_set_from_incentive(target_plot_incentives(i));
+  target_plot_incentives_latex_labels{i} = ...
+    ParamsHelper.incentive_latex_label(player_set, player);
+end
 %%%%%%%%%%%%%%%%%%%
 
 % 1. データの読み込み
-if exist(target_data, 'file')
-  fprintf('データを読み込みます\n');
-  data = load(target_data);
+if exist(target_symbolic_data, 'file') && exist(target_optimizer_data, 'file')
+  fprintf('シンボリックデータと最適化データを読み込みます\n');
+  data = load(target_symbolic_data);
   policies = Policy.get_all_possible_policies();
   state_value_solutions = data.state_value_solutions;
   expected_utility_solutions = data.expected_utility_solutions;
-  disp('データを読み込みました');
+
+  optimizer_data = load(target_optimizer_data);
+  result = optimizer_data.result;
+  disp('シンボリックデータと最適化データを読み込みました');
 else
-  error('データが存在しません');
+  error('シンボリックデータまたは最適化データが存在しません');
 end
 
 % 2. パラメータを数値的に評価したSolutionを作成する
@@ -38,33 +66,26 @@ policy = policies{policy_index};
 % 制約条件1. policyが安定となるための不等式制約
 % ※ ここで複数の式（OR条件）が返ってくる可能性があります
 stability_ineqs = MathUtils.expand_or_optimized( ...
-  policy.stability_condition('EBP', expected_utility_solutions) ...
+  policy.stability_condition(stability_type, expected_utility_solutions) ...
 );
 
 % 制約条件2. インセンティブの収支を満たすための等式制約
-incentive_eq = ParamsHelper.incentive_condition();
-
-% デフォルト値の設定
-default_vals = [
-  -88.168581, ... % u__v1_0__ps2_1___v1_0_
-  0.956012, ... % u__v1_0__ps3_1___v1_0_
-  101.326738, ... % u__v1_0__ps2_1__ps3_1___v1_0_
-  88.168581, ... % u__v1_0__ps2_1___ps2_1_
-  -262.506189, ... % u__v1_0__ps2_1__ps3_1___ps2_1_
-  -0.956012, ... % u__v1_0__ps3_1___ps3_1_
-  161.179451, ... % u__v1_0__ps2_1__ps3_1___ps3_1_
-];
+[incentive_eq, incentive_ineq] = ParamsHelper.incentive_condition( ...
+  policy, ...
+  use_positive_incentive_condition ...
+);
 
 % 4. Visualizerの設定と描画
-viz = ConstraintVisualizer(n, default_vals);
-viz.Bounds = 500; % 描画範囲を大きめに設定
+viz = ConstraintVisualizer(n, result.x);
 viz.ObjectiveFunction = @(x) sum(x.^2, 2);
-viz.ContourLevels = 250;
 
 % stability_ineqs の各要素を個別に addInequalitySet することで、
 % Visualizer側でこれらを「OR条件（和集合）」として重ねて描画させます。
 for j = 1:length(stability_ineqs)
-  [A, b] = EqualityInequalityHelper.get_inequality_matrix(variables, stability_ineqs{j});
+  [A, b] = EqualityInequalityHelper.get_inequality_matrix( ...
+    variables, ...
+    and(stability_ineqs{j}, incentive_ineq) ...
+  );
   viz = viz.addInequalitySet(double(A), double(b));
 end
 
@@ -82,5 +103,21 @@ if ~isempty(A_eq_total)
   viz = viz.setEquality(A_eq_total, b_eq_total);
 end
 
-% 描画実行
-viz.plot([3,5,7]);
+viz.plot(target_plot_dimensions, ...
+    'Title', [ ...
+      'Incentive Region for Stabilizing Policy ', ...
+      policy.latex_label_indexed(), ...
+      ' (', stability_type, ')' ...
+    ], ...
+    'AutoUpdateLabelPosition', true, ... % 回転時にラベル位置を自動更新
+    'LabelOffset', 80, ... % 軸の端からの距離 (枠線からのオフセット)
+    'XLabel', target_plot_incentives_latex_labels{1}, ... % x軸のラベル（LaTeX記法）
+    'YLabel', target_plot_incentives_latex_labels{2}, ... % y軸のラベル（LaTeX記法）
+    'ZLabel', target_plot_incentives_latex_labels{3}, ... % z軸のラベル（LaTeX記法）
+    'XLim', [-plot_bound, plot_bound], ... % x軸の範囲
+    'YLim', [-plot_bound, plot_bound], ... %y軸の範囲
+    'ZLim', [-plot_bound, plot_bound], ... % z軸の範囲
+    'Bounds', plot_bound, ...  % 変数範囲の最大値
+    'ContourLevels', 250, ...  % カラーマップの段階数
+    'ColorbarLimits', [0, 5e5], ...  % カラーバー（=目的関数）の数値範囲
+    'ColorbarLabel', 'objective-value');  % カラーバーのラベル

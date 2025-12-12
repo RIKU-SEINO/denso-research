@@ -8,24 +8,21 @@ classdef ConstraintVisualizer
   %   - 線分退化時のグラデーション描画対応 (2D)
 
   properties (Access = public)
-    A_eq double
-    b_eq double
-    IneqSets struct       % 構造体配列: .A, .b
+    A_eq double           % 等式制約の係数行列
+    b_eq double           % 等式制約の定数項
+    IneqSets struct       % 構造体配列: .A (不等式制約の係数行列), .b (不等式制約の定数項)
     Defaults double       % デフォルト値
-    NumVars int32
-    Bounds double = 100;  % 描画範囲
+    NumVars int32         % 変数の数
     
     % --- Visualization Settings ---
     
     % 目的関数 (例: @(x) log10(sum(x.^2, 2)))
     % 設定時はグラデーション、空の場合は UnifiedColor を使用
     ObjectiveFunction function_handle = function_handle.empty;
-    
-    % 等高線の設定 (0: 滑らか, N: N段階の離散カラー)
-    ContourLevels double = 20; 
+  end
 
-    % 単色塗り時の色
-    UnifiedColor = [0, 0.4470, 0.7410];
+  properties (Access = private)
+    ViewListener  % 視点変更リスナー
   end
 
   methods (Access = public)
@@ -48,10 +45,21 @@ classdef ConstraintVisualizer
       obj.IneqSets(idx).b = b(:);
     end
 
-    function plot(obj, viewDims)
+    function plot(obj, viewDims, varargin)
       % メイン描画メソッド
+      % オプション引数:
+      %   'Title' - グラフタイトル
+      %   'XLabel', 'YLabel', 'ZLabel' - 軸ラベル
+      %   'XLim', 'YLim', 'ZLim' - 軸範囲
+      %   'ColorbarWidth' - カラーバーの幅
+      %   'ColorbarLabel' - カラーバーラベル
+      %   'FontName' - フォント名
+      %   'FontSize' - フォントサイズ
+      %   'TitleFontSize' - タイトルフォントサイズ
+      
       obj.validateDims(viewDims);
-      obj.setupFigure(viewDims);
+      options = obj.parseOptions(viewDims, varargin{:});
+      obj.setupFigure(viewDims, options);
 
       for i = 1:length(obj.IneqSets)
         % 1. 射影 (Project)
@@ -59,30 +67,33 @@ classdef ConstraintVisualizer
 
         % 2. 描画 (Draw)
         if length(viewDims) == 2
-          obj.drawRegion2D(A_sub, b_sub, A_eq_sub, b_eq_sub);
+          obj.drawRegion2D(A_sub, b_sub, A_eq_sub, b_eq_sub, options);
         else
-          obj.drawRegion3D(A_sub, b_sub, A_eq_sub, b_eq_sub);
+          obj.drawRegion3D(A_sub, b_sub, A_eq_sub, b_eq_sub, options);
         end
       end
 
-      obj.finalizeFigure(viewDims);
+      % Defaultsの点をプロット
+      pointHandle = obj.plotDefaultPoint(viewDims);
+
+      obj.finalizeFigure(viewDims, pointHandle, options);
     end
   end
 
   %% --- Private Methods: 3D Logic ---
   methods (Access = private)
     
-    function drawRegion3D(obj, A, b, A_eq, b_eq)
+    function drawRegion3D(obj, A, b, A_eq, b_eq, options)
       % 1. 制約平面の収集
       [Planes_A, Planes_b, Check_A, Check_b, Check_A_eq, Check_b_eq] = ...
-          obj.collectPlanes(A, b, A_eq, b_eq);
+          obj.collectPlanes(A, b, A_eq, b_eq, options);
 
       % 2. 頂点計算 (3平面交差全探索)
       verts = obj.computeVertices3D(Planes_A, Planes_b, Check_A, Check_b, Check_A_eq, Check_b_eq);
 
       % 3. 形状生成と描画
       if ~isempty(verts)
-        obj.renderShape3D(verts);
+        obj.renderShape3D(verts, options);
       end
     end
 
@@ -112,7 +123,7 @@ classdef ConstraintVisualizer
       end
     end
 
-    function renderShape3D(obj, verts)
+    function renderShape3D(obj, verts, options)
       hold on;
       if size(verts, 1) < 3, return; end
 
@@ -138,7 +149,7 @@ classdef ConstraintVisualizer
       [verts_refined, faces_refined] = obj.refineMesh(verts, faces, 3);
       
       % 3. 色属性決定
-      [cData, faceColor, faceAlpha] = obj.determineColorAttributes(verts_refined);
+      [cData, faceColor, faceAlpha] = obj.determineColorAttributes(verts_refined, options);
       
       % 4. 描画
       trisurf(faces_refined, ...
@@ -153,31 +164,31 @@ classdef ConstraintVisualizer
   %% --- Private Methods: 2D Logic ---
   methods (Access = private)
     
-    function drawRegion2D(obj, A, b, A_eq, b_eq)
+    function drawRegion2D(obj, A, b, A_eq, b_eq, options)
       if ~isempty(A_eq)
         A = [A; A_eq; -A_eq];
         b = [b; b_eq; -b_eq];
       end
 
-      verts = obj.computeVertices2D(A, b);
+      verts = obj.computeVertices2D(A, b, options);
 
       if ~isempty(verts)
-        obj.renderShape2D(verts);
+        obj.renderShape2D(verts, options);
       end
     end
 
-    function verts = computeVertices2D(obj, A, b)
+    function verts = computeVertices2D(~, A, b, options)
       verts = [];
-      options = optimoptions('linprog', 'Display', 'off', 'Algorithm', 'dual-simplex');
-      lb = -obj.Bounds * ones(2, 1); 
-      ub =  obj.Bounds * ones(2, 1);
+      linprog_options = optimoptions('linprog', 'Display', 'off', 'Algorithm', 'dual-simplex');
+      lb = -options.Bounds * ones(2, 1); 
+      ub =  options.Bounds * ones(2, 1);
 
       thetas = linspace(0, 2*pi, 60)';
       directions = [cos(thetas), sin(thetas); 1 1; 1 -1; -1 1; -1 -1];
 
       for k = 1:size(directions, 1)
         try
-          [x, ~, exitflag] = linprog(-directions(k, :), A, b, [], [], lb, ub, options);
+          [x, ~, exitflag] = linprog(-directions(k, :), A, b, [], [], lb, ub, linprog_options);
           if exitflag == 1, verts = [verts; x']; end %#ok<AGROW>
         catch
         end
@@ -185,8 +196,8 @@ classdef ConstraintVisualizer
       if ~isempty(verts), verts = uniquetol(verts, 1e-5, 'ByRows', true); end
     end
 
-    function renderShape2D(obj, verts)
-      [cData, ~, faceAlpha] = obj.determineColorAttributes(verts);
+    function renderShape2D(obj, verts, options)
+      [cData, ~, faceAlpha] = obj.determineColorAttributes(verts, options);
       nVerts = size(verts, 1);
       useGradient = ~isempty(cData);
       
@@ -202,24 +213,24 @@ classdef ConstraintVisualizer
             patch('Vertices', verts, 'Faces', k, 'FaceVertexCData', cData, ...
                   'FaceColor', 'interp', 'FaceAlpha', faceAlpha, 'EdgeColor', 'none');
           else
-            fill(verts(k, 1), verts(k, 2), obj.UnifiedColor, 'FaceAlpha', faceAlpha, 'EdgeColor', 'none');
+            fill(verts(k, 1), verts(k, 2), options.UnifiedColor, 'FaceAlpha', faceAlpha, 'EdgeColor', 'none');
           end
         catch
           % convhull失敗時は線分とみなす
-          obj.drawGradientLine(verts, useGradient);
+          obj.drawGradientLine(verts, useGradient, options);
         end
       elseif nVerts == 2
         % 線分
-        obj.drawGradientLine(verts, useGradient);
+        obj.drawGradientLine(verts, useGradient, options);
       elseif nVerts == 1
         % 点
-        color = obj.UnifiedColor;
+        color = options.UnifiedColor;
         if useGradient, color = cData; end
         scatter(verts(:, 1), verts(:, 2), 50, color, 'filled', 'MarkerEdgeColor', 'k');
       end
     end
 
-    function drawGradientLine(obj, verts, useGradient)
+    function drawGradientLine(obj, verts, useGradient, options)
         % 線分を細分化してグラデーション描画する
         [~, idx] = sortrows(verts); 
         sortedVerts = verts(idx, :);
@@ -241,13 +252,105 @@ classdef ConstraintVisualizer
                     'FaceColor', 'none', 'EdgeColor', 'interp', 'LineWidth', 2);
         else
             plot([ptStart(1) ptEnd(1)], [ptStart(2) ptEnd(2)], ...
-                 'Color', obj.UnifiedColor, 'LineWidth', 2);
+                 'Color', options.UnifiedColor, 'LineWidth', 2);
         end
+    end
+  end
+
+  %% --- Private Methods: Point Plotting ---
+  methods (Access = private)
+    
+    function h = plotDefaultPoint(obj, viewDims)
+      % Defaultsの点を射影して描画
+      point_projected = obj.Defaults(viewDims);
+      
+      if length(viewDims) == 2
+        h = scatter(point_projected(1), point_projected(2), ...
+                    64, 'r', 'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 1.2);
+      else
+        h = scatter3(point_projected(1), point_projected(2), point_projected(3), ...
+                     64, 'r', 'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 1.2);
+      end
+      
+      % UserDataに元の座標を保存
+      set(h, 'UserData', struct('FullDimPoint', obj.Defaults, 'ViewDims', viewDims));
+    end
+    
+    function txt = dataCursorUpdateFcn(obj, event_obj, viewDims)
+      % データカーソルのカスタム表示関数
+      pos = get(event_obj, 'Position');
+      
+      % 表示テキストの構築
+      txt = cell(length(viewDims) + 1, 1);
+      for i = 1:length(viewDims)
+        txt{i} = sprintf('x_{%d}: %.4f', viewDims(i), pos(i));
+      end
+      
+      % 目的関数値の表示(設定されている場合)
+      if ~isempty(obj.ObjectiveFunction)
+        objValue = obj.ObjectiveFunction(obj.Defaults');
+        txt{end} = sprintf('Objective: %.4f', objValue);
+      else
+        txt = txt(1:end-1);  % 目的関数がない場合は最後の行を削除
+      end
     end
   end
 
   %% --- Private Methods: Utilities ---
   methods (Access = private)
+    
+    function options = parseOptions(~, viewDims, varargin)
+      % オプション引数のパース
+      p = inputParser;
+      
+      % デフォルトのラベルとタイトル
+      default_title = sprintf('%dD Slice Visualization (Dims: %s)', length(viewDims), mat2str(viewDims));
+      default_xlabel = sprintf('x_{%d}', viewDims(1));
+      default_ylabel = sprintf('x_{%d}', viewDims(2));
+      if length(viewDims) == 3
+        default_zlabel = sprintf('x_{%d}', viewDims(3));
+      else
+        default_zlabel = '';
+      end
+      
+      % デフォルト値
+      default_bounds = 100;
+      default_unified_color = [0, 0.4470, 0.7410];
+      default_contour_levels = 20;
+      
+      % パラメータ定義
+      addParameter(p, 'Title', default_title, @ischar);
+      addParameter(p, 'XLabel', default_xlabel, @ischar);
+      addParameter(p, 'YLabel', default_ylabel, @ischar);
+      addParameter(p, 'ZLabel', default_zlabel, @ischar);
+      addParameter(p, 'XLim', [-default_bounds, default_bounds], @(x) isnumeric(x) && length(x) == 2);
+      addParameter(p, 'YLim', [-default_bounds, default_bounds], @(x) isnumeric(x) && length(x) == 2);
+      addParameter(p, 'ZLim', [-default_bounds, default_bounds], @(x) isnumeric(x) && length(x) == 2);
+      addParameter(p, 'Bounds', default_bounds, @isnumeric);  % 内部計算用
+      addParameter(p, 'ColorbarWidth', [], @(x) isempty(x) || isnumeric(x));
+      addParameter(p, 'ColorbarLabel', 'Objective Value', @ischar);
+      addParameter(p, 'ColorbarLimits', [], @(x) isempty(x) || (isnumeric(x) && length(x) == 2));  % カラーバーの数値範囲 [min, max]
+      addParameter(p, 'FontName', 'Times New Roman', @ischar);
+      addParameter(p, 'FontSize', 18, @isnumeric);
+      addParameter(p, 'TitleFontSize', 20, @isnumeric);
+      addParameter(p, 'UnifiedColor', default_unified_color, @(x) isnumeric(x) && length(x) == 3);
+      addParameter(p, 'ContourLevels', default_contour_levels, @isnumeric);
+      
+      % ラベル位置調整用オプション
+      addParameter(p, 'XLabelPosition', [], @(x) isempty(x) || (isnumeric(x) && length(x) == 3));
+      addParameter(p, 'YLabelPosition', [], @(x) isempty(x) || (isnumeric(x) && length(x) == 3));
+      addParameter(p, 'ZLabelPosition', [], @(x) isempty(x) || (isnumeric(x) && length(x) == 3));
+      addParameter(p, 'XLabelRotation', [], @(x) isempty(x) || isnumeric(x));
+      addParameter(p, 'YLabelRotation', [], @(x) isempty(x) || isnumeric(x));
+      addParameter(p, 'ZLabelRotation', [], @(x) isempty(x) || isnumeric(x));
+      
+      % 動的ラベル位置更新
+      addParameter(p, 'AutoUpdateLabelPosition', false, @islogical);
+      addParameter(p, 'LabelOffset', 0, @isnumeric);
+      
+      parse(p, varargin{:});
+      options = p.Results;
+    end
       
     function [newVerts, newFaces] = refineMesh(~, verts, faces, iterations)
       % 共通メッシュ細分化ロジック
@@ -304,7 +407,7 @@ classdef ConstraintVisualizer
       end
     end
 
-    function [cData, faceColor, faceAlpha] = determineColorAttributes(obj, verts)
+    function [cData, faceColor, faceAlpha] = determineColorAttributes(obj, verts, options)
       useGradient = ~isempty(obj.ObjectiveFunction);
       if useGradient
         cData = obj.ObjectiveFunction(verts);
@@ -312,7 +415,7 @@ classdef ConstraintVisualizer
         faceAlpha = 0.8;
       else
         cData = [];
-        faceColor = obj.UnifiedColor;
+        faceColor = options.UnifiedColor;
         faceAlpha = 0.6;
       end
     end
@@ -335,13 +438,13 @@ classdef ConstraintVisualizer
       end
     end
 
-    function [Planes_A, Planes_b, Check_A, Check_b, Check_A_eq, Check_b_eq] = collectPlanes(obj, A, b, A_eq, b_eq)
+    function [Planes_A, Planes_b, Check_A, Check_b, Check_A_eq, Check_b_eq] = collectPlanes(~, A, b, A_eq, b_eq, options)
       Planes_A = A; Planes_b = b;
       if ~isempty(A_eq), Planes_A = [Planes_A; A_eq]; Planes_b = [Planes_b; b_eq]; end
       
       I = eye(3);
       Box_A = [I; -I];
-      Box_b = repmat(obj.Bounds, 6, 1);
+      Box_b = repmat(options.Bounds, 6, 1);
       
       Planes_A = [Planes_A; Box_A]; Planes_b = [Planes_b; Box_b];
       Check_A = [A; Box_A]; Check_b = [b; Box_b];
@@ -355,31 +458,203 @@ classdef ConstraintVisualizer
       end
     end
 
-    function setupFigure(obj, viewDims)
+    function setupFigure(obj, viewDims, options)
       m = length(viewDims);
       figure; hold on; grid on;
-      title(sprintf('%dD Slice Visualization (Dims: %s)', m, mat2str(viewDims)));
-      xlabel(['x_{' num2str(viewDims(1)) '}']);
-      ylabel(['x_{' num2str(viewDims(2)) '}']);
-      if m == 3, zlabel(['x_{' num2str(viewDims(3)) '}']); view(3); end
       
+      % タイトルと軸ラベルの設定
+      title(options.Title, ...
+            'Interpreter', 'latex', ...
+            'FontSize', options.TitleFontSize, ...
+            'FontName', options.FontName);
+      
+      hXLabel = xlabel(options.XLabel, ...
+                       'Interpreter', 'latex', ...
+                       'FontName', options.FontName, ...
+                       'FontSize', options.FontSize);
+      if ~isempty(options.XLabelPosition)
+        hXLabel.Position = options.XLabelPosition;
+      end
+      if ~isempty(options.XLabelRotation)
+        hXLabel.Rotation = options.XLabelRotation;
+      end
+      
+      hYLabel = ylabel(options.YLabel, ...
+                       'Interpreter', 'latex', ...
+                       'FontName', options.FontName, ...
+                       'FontSize', options.FontSize);
+      if ~isempty(options.YLabelPosition)
+        hYLabel.Position = options.YLabelPosition;
+      end
+      if ~isempty(options.YLabelRotation)
+        hYLabel.Rotation = options.YLabelRotation;
+      end
+      
+      if m == 3
+        hZLabel = zlabel(options.ZLabel, ...
+                         'Interpreter', 'latex', ...
+                         'FontName', options.FontName, ...
+                         'FontSize', options.FontSize);
+        if ~isempty(options.ZLabelPosition)
+          hZLabel.Position = options.ZLabelPosition;
+        end
+        if ~isempty(options.ZLabelRotation)
+          hZLabel.Rotation = options.ZLabelRotation;
+        end
+        view(3);
+      end
+      
+      % 軸のスタイル設定（論文用）
+      set(gca, ...
+          'FontName', options.FontName, ...
+          'FontSize', options.FontSize, ...
+          'LineWidth', 1.5, ...
+          'Box', 'off');
+      
+      % 軸プロパティの詳細設定
+      xaxisproperties = get(gca, 'XAxis');
+      yaxisproperties = get(gca, 'YAxis');
+      xaxisproperties.TickLabelInterpreter = 'latex';
+      xaxisproperties.FontSize = options.FontSize;
+      yaxisproperties.TickLabelInterpreter = 'latex';
+      yaxisproperties.FontSize = options.FontSize;
+      
+      if m == 3
+        zaxisproperties = get(gca, 'ZAxis');
+        zaxisproperties.TickLabelInterpreter = 'latex';
+        zaxisproperties.FontSize = options.FontSize;
+      end
+      
+      % カラーバーの設定
       if ~isempty(obj.ObjectiveFunction)
-        if obj.ContourLevels > 0
-          colormap(parula(obj.ContourLevels));
+        if options.ContourLevels > 0
+          colormap(parula(options.ContourLevels));
         else
           colormap('parula');
         end
         cb = colorbar;
-        cb.Label.String = 'Objective Value';
+        cb.Label.String = options.ColorbarLabel;
+        cb.Label.Interpreter = 'latex';
+        cb.Label.FontSize = options.FontSize;
+        cb.Label.FontName = options.FontName;
+        
+        % カラーバーの幅設定
+        if ~isempty(options.ColorbarWidth)
+          cb.Position(3) = options.ColorbarWidth;
+        end
       end
     end
 
-    function finalizeFigure(obj, viewDims)
-      limit = obj.Bounds;
-      xlim([-limit limit]);
-      ylim([-limit limit]);
-      if length(viewDims) == 3, zlim([-limit limit]); end
+    function finalizeFigure(obj, viewDims, pointHandle, options)
+      % 描画後の仕上げ（軸範囲設定・カラーバー調整・データカーソル・ラベル追従）
+      % Args:
+      %   viewDims (double vec): 可視化する次元のインデックス (長さ2または3)
+      %   pointHandle (graphics handle): Defaults点プロットのハンドル
+      %   options (struct): parseOptions の結果
+      % Returns: なし
+      xlim(options.XLim);
+      ylim(options.YLim);
+      if length(viewDims) == 3
+        zlim(options.ZLim);
+      end
+      
+      % カラーバーの数値範囲設定
+      if ~isempty(options.ColorbarLimits)
+        clim(options.ColorbarLimits);
+      end
+      
+      % グリッド設定（論文用）
+      grid on;
+      ax = gca;
+      ax.GridAlpha = 0.3;
+      
       hold off;
+      
+      % データカーソルモードのカスタム関数を設定（モード自体は有効化しない）
+      if ~isempty(pointHandle)
+        dcm = datacursormode(gcf);
+        set(dcm, 'UpdateFcn', @(~, event_obj) obj.dataCursorUpdateFcn(event_obj, viewDims));
+      end
+      % 動的ラベル位置更新
+      if options.AutoUpdateLabelPosition
+         obj.ViewListener = addlistener(gca, 'View', 'PostSet', ...
+            @(~,~) obj.updateLabelPositions(gca, viewDims, options));
+         obj.updateLabelPositions(gca, viewDims, options);
+      end
+    end
+
+    function updateLabelPositions(~, ax, viewDims, options)
+      % 軸ラベルの配置を動的に更新する（視点に追従）
+      % Args:
+      %   ax (axes): 対象の Axes
+      %   viewDims (double vec): 可視化している次元 (長さ2または3)
+      %   options (struct): parseOptions の結果（LabelOffset 利用）
+      % Returns: なし
+      offset = options.LabelOffset; 
+      if offset == 0, return; end
+      
+      xlims = ax.XLim;
+      ylims = ax.YLim;
+      zlims = ax.ZLim;
+      
+      if length(viewDims) == 3
+        offset_val = abs(offset); 
+        cp = ax.CameraPosition;
+        
+        % --- X Label (Y近傍, Zは下) ---
+        y_edge = selectNearEdge(cp(2), ylims);
+        z_edge = zlims(1);
+        ax.XLabel.Position = [mean(xlims), y_edge + sign(y_edge) * offset_val, ...
+                                            z_edge + sign(z_edge) * offset_val];
+        
+        % --- Y Label (X近傍, Zは下) ---
+        x_edge = selectNearEdge(cp(1), xlims);
+        z_edge = zlims(1);
+        ax.YLabel.Position = [x_edge + sign(x_edge) * offset_val, ...
+                              mean(ylims), ...
+                              z_edge + sign(z_edge) * offset_val];
+        
+        % --- Z Label (視点から見て左側の縦稜線) ---
+         [x_edge, y_edge] = selectLeftVerticalEdge(cp, xlims, ylims);
+         z_offset = offset_val * 0.7; % Z軸ラベルは少し軸寄りにする
+         ax.ZLabel.Position = [x_edge + sign(x_edge) * z_offset, ...
+                               y_edge + sign(y_edge) * z_offset, ...
+                               mean(zlims)];
+
+        ax.XLabel.HorizontalAlignment = 'center';
+        ax.YLabel.HorizontalAlignment = 'center';
+        ax.ZLabel.HorizontalAlignment = 'center';
+      else
+        % 2D
+        ax.XLabel.Position = [xlims(2) + offset, 0];
+        ax.YLabel.Position = [0, ylims(2) + offset];
+      end
+      
+      % --- Local Helper Functions ---
+      function edge = selectNearEdge(camPosVal, lims)
+        % Args: camPosVal (double), lims (1x2 double)
+        % Returns: edge (double) - camera に近い側の端
+        if abs(camPosVal - lims(1)) < abs(camPosVal - lims(2))
+          edge = lims(1);
+        else
+          edge = lims(2);
+        end
+      end
+      
+      function [xe, ye] = selectLeftVerticalEdge(camPos, xl, yl)
+        % Args: camPos (1x3 double), xl/yl (1x2 double)
+        % Returns: xe, ye (double) - 視点から見て左側の縦稜線のX/Y座標
+        x_mean = mean(xl); y_mean = mean(yl);
+        if camPos(1) > x_mean && camPos(2) > y_mean     % Q1 (++,++)
+          xe = xl(2); ye = yl(1);
+        elseif camPos(1) < x_mean && camPos(2) > y_mean % Q2 (-,+)
+          xe = xl(2); ye = yl(2);
+        elseif camPos(1) < x_mean && camPos(2) < y_mean % Q3 (-,-)
+          xe = xl(1); ye = yl(2);
+        else                                            % Q4 (+,-)
+          xe = xl(1); ye = yl(1);
+        end
+      end
     end
   end
 end
