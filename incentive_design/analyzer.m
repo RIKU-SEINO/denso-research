@@ -9,6 +9,7 @@ stability_type = 'EBP'; % 'BP' または 'EBP' のいずれか
 should_analyze_stabilizability = true; % 安定化可能条件の導出を行うかどうか
 should_analyze_self_stability = true; % 自律的安定条件の導出を行うかどうか
 params_to_evaluate = {'g'}; % 数値的に評価するパラメータを文字列のcell配列で指定。
+use_positive_incentive_condition = true; % マッチしないプレイヤに対して、インセンティブが0以上であることを制約する場合は true, そうでない場合は false
 %%%%%%%%%%%%%%%%%%%
 
 % 1. データの読み込み
@@ -43,7 +44,10 @@ if should_analyze_stabilizability
     fprintf('安定条件制約数: %d\n', length(stability_ineqs));
     condition = symfalse;
     for i = 1:length(stability_ineqs)
-      incentive_eq = ParamsHelper.incentive_condition();
+      [incentive_eq, incentive_ineq] = ParamsHelper.incentive_condition( ...
+        policy, ...
+        use_positive_incentive_condition ...
+      );
       stability_ineq = stability_ineqs{i};
 
       [A_eq, b_eq] = EqualityInequalityHelper.get_equality_matrix( ...
@@ -52,7 +56,7 @@ if should_analyze_stabilizability
       );
       [A_ineq, b_ineq] = EqualityInequalityHelper.get_inequality_matrix( ...
         variables, ...
-        stability_ineq ...
+        and(stability_ineq, incentive_ineq) ...
       );
 
       fprintf('Fourier-Motzkin消去法を用いて、不等式制約の可解条件を導出します\n');
