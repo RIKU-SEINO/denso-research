@@ -73,10 +73,51 @@ classdef ConstraintVisualizer
         end
       end
 
-      % Defaultsの点をプロット
-      pointHandle = obj.plotDefaultPoint(viewDims);
+      % Defaultsの点をプロット（必要な場合のみ）
+      pointHandle = [];
+      if options.PlotDefaultPoint
+        pointHandle = obj.plotDefaultPoint(viewDims, options);
+      end
 
       obj.finalizeFigure(viewDims, pointHandle, options);
+    end
+
+    function filepath = save(~, varargin)
+      % 現在の Figure を .fig として保存する
+      %
+      % Args:
+      %   BaseName (char): 拡張子なしのファイル名
+      %   Directory (char): 保存先ディレクトリ（例: 'result/fig'）
+      %   FigureHandle (matlab.ui.Figure): 保存対象の Figure（省略時は gcf）
+      %
+      % Returns:
+      %   filepath (char): 保存した .fig のパス
+      p = inputParser;
+      addParameter(p, 'BaseName', '', @ischar);
+      addParameter(p, 'Directory', '', @ischar);
+      addParameter(p, 'FigureHandle', [], @(h) isempty(h) || ishghandle(h));
+      parse(p, varargin{:});
+      opts = p.Results;
+
+      if isempty(opts.BaseName)
+        error('BaseName を指定してください（例: viz.save(''BaseName'',''pi_8_bp_positive_cons_fixed_value_projection'')）');
+      end
+
+      fig = opts.FigureHandle;
+      if isempty(fig)
+        fig = gcf;
+      end
+
+      outDir = opts.Directory;
+      if isempty(outDir)
+        outDir = pwd;
+      end
+      if ~exist(outDir, 'dir')
+        mkdir(outDir);
+      end
+
+      filepath = fullfile(outDir, [opts.BaseName, '.fig']);
+      savefig(fig, filepath);
     end
   end
 
@@ -260,16 +301,24 @@ classdef ConstraintVisualizer
   %% --- Private Methods: Point Plotting ---
   methods (Access = private)
     
-    function h = plotDefaultPoint(obj, viewDims)
+    function h = plotDefaultPoint(obj, viewDims, options)
       % Defaultsの点を射影して描画
       point_projected = obj.Defaults(viewDims);
       
       if length(viewDims) == 2
         h = scatter(point_projected(1), point_projected(2), ...
-                    64, 'r', 'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 1.2);
+                    options.DefaultPointSize, options.DefaultPointColor, ...
+                    'filled', ...
+                    'Marker', options.DefaultPointMarker, ...
+                    'MarkerEdgeColor', options.DefaultPointEdgeColor, ...
+                    'LineWidth', options.DefaultPointLineWidth);
       else
         h = scatter3(point_projected(1), point_projected(2), point_projected(3), ...
-                     64, 'r', 'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 1.2);
+                     options.DefaultPointSize, options.DefaultPointColor, ...
+                     'filled', ...
+                     'Marker', options.DefaultPointMarker, ...
+                     'MarkerEdgeColor', options.DefaultPointEdgeColor, ...
+                     'LineWidth', options.DefaultPointLineWidth);
       end
       
       % UserDataに元の座標を保存
@@ -335,6 +384,16 @@ classdef ConstraintVisualizer
       addParameter(p, 'TitleFontSize', 20, @isnumeric);
       addParameter(p, 'UnifiedColor', default_unified_color, @(x) isnumeric(x) && length(x) == 3);
       addParameter(p, 'ContourLevels', default_contour_levels, @isnumeric);
+      
+      % Defaults点（最適解のマーク）設定
+      addParameter(p, 'PlotDefaultPoint', true, @islogical);
+      addParameter(p, 'DefaultPointMarker', 'o', @ischar);
+      addParameter(p, 'DefaultPointSize', 120, @isnumeric);
+      addParameter(p, 'DefaultPointColor', 'r'); % MATLAB ColorSpec
+      addParameter(p, 'DefaultPointEdgeColor', 'k'); % MATLAB ColorSpec
+      addParameter(p, 'DefaultPointLineWidth', 2.0, @isnumeric);
+      addParameter(p, 'DefaultPointAlwaysOnTop', false, @islogical);
+      addParameter(p, 'DefaultPointDepthOffset', [], @(x) isempty(x) || isnumeric(x));
       
       % ラベル位置調整用オプション
       addParameter(p, 'XLabelPosition', [], @(x) isempty(x) || (isnumeric(x) && length(x) == 3));
@@ -575,11 +634,73 @@ classdef ConstraintVisualizer
         dcm = datacursormode(gcf);
         set(dcm, 'UpdateFcn', @(~, event_obj) obj.dataCursorUpdateFcn(event_obj, viewDims));
       end
+
+      % Defaults点を常に表側に見せる（カメラ方向に微小オフセット＋描画順）
+      if ~isempty(pointHandle) && options.DefaultPointAlwaysOnTop && length(viewDims) == 3
+        ax = gca;
+        try
+          % 半透明サーフェスの描画順が崩れないよう、depth を優先
+          ax.SortMethod = 'depth';
+        catch
+        end
+        try
+          uistack(pointHandle, 'top');
+        catch
+        end
+
+        obj.updateDefaultPointOnTop(ax, pointHandle, viewDims, options);
+
+        % 既存のViewListenerがあれば上書きせず、複数保持できるようにする
+        listener = addlistener(ax, 'View', 'PostSet', ...
+          @(~,~) obj.updateDefaultPointOnTop(ax, pointHandle, viewDims, options));
+        if isempty(obj.ViewListener)
+          obj.ViewListener = listener;
+        else
+          obj.ViewListener(end+1) = listener; %#ok<AGROW>
+        end
+      end
       % 動的ラベル位置更新
       if options.AutoUpdateLabelPosition
          obj.ViewListener = addlistener(gca, 'View', 'PostSet', ...
             @(~,~) obj.updateLabelPositions(gca, viewDims, options));
          obj.updateLabelPositions(gca, viewDims, options);
+      end
+    end
+
+    function updateDefaultPointOnTop(obj, ax, pointHandle, viewDims, options)
+      % Defaults点をカメラ方向に微小オフセットして前面に見せる
+      % Args:
+      %   ax (axes)
+      %   pointHandle (graphics handle)
+      %   viewDims (double vec)
+      %   options (struct)
+      % Returns: なし
+      try
+        data = get(pointHandle, 'UserData');
+        fullPoint = data.FullDimPoint(:);
+      catch
+        fullPoint = obj.Defaults(:);
+      end
+
+      p = fullPoint(viewDims);
+      cp = ax.CameraPosition(:);
+      p = p(:);
+      dir = cp - p;
+      n = norm(dir);
+      if n < 1e-12, return; end
+      dir = dir / n;
+
+      if isempty(options.DefaultPointDepthOffset)
+        depthOffset = max(1e-3 * options.Bounds, 1e-6);
+      else
+        depthOffset = options.DefaultPointDepthOffset;
+      end
+
+      p2 = p + dir * depthOffset;
+      set(pointHandle, 'XData', p2(1), 'YData', p2(2), 'ZData', p2(3));
+      try
+        uistack(pointHandle, 'top');
+      catch
       end
     end
 
