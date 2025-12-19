@@ -353,13 +353,15 @@ classdef ConstraintVisualizer
       p = inputParser;
       
       % デフォルトのラベルとタイトル
-      default_title = sprintf('%dD Slice Visualization (Dims: %s)', length(viewDims), mat2str(viewDims));
+      default_title = '';
       default_xlabel = sprintf('x_{%d}', viewDims(1));
       default_ylabel = sprintf('x_{%d}', viewDims(2));
       if length(viewDims) == 3
         default_zlabel = sprintf('x_{%d}', viewDims(3));
+        default_zlabel_rotation = 0; % 横書き
       else
         default_zlabel = '';
+        default_zlabel_rotation = [];
       end
       
       % デフォルト値
@@ -380,8 +382,8 @@ classdef ConstraintVisualizer
       addParameter(p, 'ColorbarLabel', 'Objective Value', @ischar);
       addParameter(p, 'ColorbarLimits', [], @(x) isempty(x) || (isnumeric(x) && length(x) == 2));  % カラーバーの数値範囲 [min, max]
       addParameter(p, 'FontName', 'Times New Roman', @ischar);
-      addParameter(p, 'FontSize', 18, @isnumeric);
-      addParameter(p, 'TitleFontSize', 20, @isnumeric);
+      addParameter(p, 'FontSize', 36, @isnumeric);
+      addParameter(p, 'TitleFontSize', 40, @isnumeric);
       addParameter(p, 'UnifiedColor', default_unified_color, @(x) isnumeric(x) && length(x) == 3);
       addParameter(p, 'ContourLevels', default_contour_levels, @isnumeric);
       
@@ -401,7 +403,7 @@ classdef ConstraintVisualizer
       addParameter(p, 'ZLabelPosition', [], @(x) isempty(x) || (isnumeric(x) && length(x) == 3));
       addParameter(p, 'XLabelRotation', [], @(x) isempty(x) || isnumeric(x));
       addParameter(p, 'YLabelRotation', [], @(x) isempty(x) || isnumeric(x));
-      addParameter(p, 'ZLabelRotation', [], @(x) isempty(x) || isnumeric(x));
+      addParameter(p, 'ZLabelRotation', default_zlabel_rotation, @(x) isempty(x) || isnumeric(x));
       
       % 動的ラベル位置更新
       addParameter(p, 'AutoUpdateLabelPosition', false, @islogical);
@@ -522,10 +524,12 @@ classdef ConstraintVisualizer
       figure; hold on; grid on;
       
       % タイトルと軸ラベルの設定
-      title(options.Title, ...
-            'Interpreter', 'latex', ...
-            'FontSize', options.TitleFontSize, ...
-            'FontName', options.FontName);
+      if ~isempty(options.Title)
+        title(options.Title, ...
+              'Interpreter', 'latex', ...
+              'FontSize', options.TitleFontSize, ...
+              'FontName', options.FontName);
+      end
       
       hXLabel = xlabel(options.XLabel, ...
                        'Interpreter', 'latex', ...
@@ -626,6 +630,15 @@ classdef ConstraintVisualizer
       grid on;
       ax = gca;
       ax.GridAlpha = 0.3;
+
+      % 3Dは x:y:z = 1:1:1 を強制
+      if length(viewDims) == 3
+        try
+          daspect([1 1 1]);
+          axis vis3d;
+        catch
+        end
+      end
       
       hold off;
       
@@ -664,6 +677,14 @@ classdef ConstraintVisualizer
          obj.ViewListener = addlistener(gca, 'View', 'PostSet', ...
             @(~,~) obj.updateLabelPositions(gca, viewDims, options));
          obj.updateLabelPositions(gca, viewDims, options);
+      end
+
+      % 3Dはドラッグ回転をデフォルトで有効化
+      if length(viewDims) == 3
+        try
+          rotate3d(gcf, 'on');
+        catch
+        end
       end
     end
 
@@ -722,11 +743,14 @@ classdef ConstraintVisualizer
         offset_val = abs(offset); 
         cp = ax.CameraPosition;
         
-        % --- X Label (Y近傍, Zは下) ---
+        % --- X Label（"右に寄せる"：x方向だけを動かし、y/z方向には余計に逃がさない） ---
+        % 画面下に落ちたり大きくズレる原因になるので、y/zにはoffsetを入れず、xだけ右へずらす。
         y_edge = selectNearEdge(cp(2), ylims);
         z_edge = zlims(1);
-        ax.XLabel.Position = [mean(xlims), y_edge + sign(y_edge) * offset_val, ...
-                                            z_edge + sign(z_edge) * offset_val];
+        % 右側の目盛り/軸ラベルと重なりやすいので、x方向は少し強めに右へ送る
+        ax.XLabel.Position = [mean(xlims) - 3*offset_val, ...
+                              y_edge, ...
+                              z_edge - 1.7*offset_val];
         
         % --- Y Label (X近傍, Zは下) ---
         x_edge = selectNearEdge(cp(1), xlims);
@@ -737,12 +761,14 @@ classdef ConstraintVisualizer
         
         % --- Z Label (視点から見て左側の縦稜線) ---
          [x_edge, y_edge] = selectLeftVerticalEdge(cp, xlims, ylims);
-         z_offset = offset_val * 0.7; % Z軸ラベルは少し軸寄りにする
+         % z軸ラベルを横書きにする分、余白を多めに取る
+         z_offset = offset_val * 2.8;
          ax.ZLabel.Position = [x_edge + sign(x_edge) * z_offset, ...
                                y_edge + sign(y_edge) * z_offset, ...
                                mean(zlims)];
 
-        ax.XLabel.HorizontalAlignment = 'center';
+        % 右方向に“伸びる”ように左寄せ（赤枠のような配置にしやすい）
+        ax.XLabel.HorizontalAlignment = 'left';
         ax.YLabel.HorizontalAlignment = 'center';
         ax.ZLabel.HorizontalAlignment = 'center';
       else

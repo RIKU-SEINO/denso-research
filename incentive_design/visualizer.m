@@ -4,7 +4,7 @@ addpath('./class/solution')
 addpath('./class/visualizer')
 
 %%%% EDIT HERE %%%%
-stability_type = 'BP'; % 'BP' または 'EBP'
+stability_type = 'EBP'; % 'BP' または 'EBP'
 policy_index = 8;
 use_positive_incentive_condition = true; % マッチしないプレイヤに対して、インセンティブが0以上であることを制約する場合は true, そうでない場合は false
 mode = 'optimal_value_projection'; % 'fixed_value_projection' または 'optimal_value_projection'
@@ -119,11 +119,6 @@ if ~isempty(A_eq_total)
 end
 
 viz.plot(target_plot_dimensions, ...
-    'Title', [ ...
-      'Incentive Region for Stabilizing Policy ', ...
-      policy.latex_label_indexed(), ...
-      ' (', stability_type, ')' ...
-    ], ...
     'AutoUpdateLabelPosition', true, ... % 回転時にラベル位置を自動更新
     'LabelOffset', 80, ... % 軸の端からの距離 (枠線からのオフセット)
     'PlotDefaultPoint', plot_default_point, ... % 最適解マークを描画するか
