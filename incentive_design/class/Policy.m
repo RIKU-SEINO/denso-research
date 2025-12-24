@@ -167,6 +167,44 @@ classdef Policy
       end
     end
 
+    function policies = get_deviated_policies_set(obj, player_pair, player_set)
+      % 指定したプレイヤペアplayer_pairとプレイヤ集合player_setについて、方策objからの方策逸脱集合を取得する。ただし、方策逸脱集合は次の条件を満たす方策からなる。
+      %   1. プレイヤ集合player_setにおいて、プレイヤペアplayer_pairが含まれるようなマッチングを指示する方策である。ただし、プレイヤペアplayer_pairは方策objの下でのマッチングM^obj(s)に含まれていない。
+      %   2. プレイヤ集合player_set以外のプレイヤ集合においては、方策objと同じマッチングを指示する方策である。
+      %
+      % Parameters:
+      %   obj (Policy): Policy インスタンス
+      %   player_pair (PlayerPair): プレイヤペア
+      %   player_set (PlayerSet): プレイヤ集合
+      %
+      % Returns:
+      %   policies (cell<Policy>): 方策逸脱集合
+
+      policies = {};
+      all_possible_policies = Policy.get_all_possible_policies();
+      player_set_index = player_set.index();
+      for i = 1:length(all_possible_policies)
+        policy = all_possible_policies{i};
+        
+        % 1. プレイヤ集合player_setにおいて、プレイヤペアplayer_pairが含まれるようなマッチングを指示する方策である。ただし、プレイヤペアplayer_pairは方策objの下でのマッチングM^obj(s)に含まれていない。
+        player_matching_under_policy = policy.get_player_matching_by_player_set(player_set);
+        player_matching_under_obj = obj.get_player_matching_by_player_set(player_set);
+        if ~player_matching_under_policy.has(player_pair) || player_matching_under_obj.has(player_pair)
+          continue; % player_pairは方策objの下でのマッチングM^obj(s)に含まれていない、または方策objの下でのM^obj(s)に含まれているので、スキップ
+        end
+
+        % 2. プレイヤ集合player_set以外のプレイヤ集合においては、方策objと同じマッチングを指示する方策である。
+        player_matchings_under_policy = policy.player_matchings;
+        player_matchings_under_obj = obj.player_matchings;
+        for idx = 1:length(player_matchings_under_policy)
+          if idx == player_set_index || ~strcmp(player_matchings_under_policy{idx}.id(), player_matchings_under_obj{idx}.id())
+            continue; % 方策objと同じマッチングを指示する方策でないので、スキップ
+          end
+        end
+
+        policies{end+1} = policy;
+      end
+    end
     function expr = stability_condition(obj, stability_type, expected_utility_solutions)
       % 指定した方策objが安定であるための条件式を取得する。安定性の種類はstability_typeで指定する。
       %

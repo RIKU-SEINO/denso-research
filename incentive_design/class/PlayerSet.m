@@ -496,25 +496,6 @@ classdef PlayerSet
         end
       end
     end
-
-    function policies = get_all_possible_policies_by_player_set_and_pair(obj, target_player_pair)
-      % 指定したプレイヤ集合において、指定したプレイヤペアtarget_player_pairが組まれるようなすべての方策を取得する
-      % \mathcal{\Pi}(\mu\mid s)に相当する
-      %
-      % Parameters:
-      %   obj (PlayerSet): 対象の PlayerSet オブジェクト
-      %   target_player_pair (PlayerPair): 指定するプレイヤペア
-      %
-      % Returns:
-      %   policies (cell<Policy>): プレイヤペアが組まれるような方策の集合
-
-      all_possible_player_matchings_by_player_pair = obj.get_all_possible_player_matchings_by_player_pair(target_player_pair); % \mathcal{A}(\mu\mid s)
-      policies = {};
-      for i = 1:length(all_possible_player_matchings_by_player_pair)
-        player_matching = all_possible_player_matchings_by_player_pair{i};
-        policies = [policies; obj.get_all_possible_policies_by_player_matching(player_matching)];
-      end
-    end
   end
 
   % static methods

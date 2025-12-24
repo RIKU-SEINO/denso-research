@@ -7,8 +7,8 @@ warning('off', 'all');
 target_data = 'result/symbolic_data.mat';
 stability_type = 'EBP'; % 'BP' または 'EBP' のいずれか
 should_analyze_stabilizability = true; % 安定化可能条件の導出を行うかどうか
-should_analyze_self_stability = true; % 自律的安定条件の導出を行うかどうか
-params_to_evaluate = {'g'}; % 数値的に評価するパラメータを文字列のcell配列で指定。
+should_analyze_self_stability = false; % 自律的安定条件の導出を行うかどうか
+params_to_evaluate = {'g', 'p_2', 'p_3'}; % 数値的に評価するパラメータを文字列のcell配列で指定。
 use_positive_incentive_condition = true; % マッチしないプレイヤに対して、インセンティブが0以上であることを制約する場合は true, そうでない場合は false
 %%%%%%%%%%%%%%%%%%%
 

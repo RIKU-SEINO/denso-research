@@ -8,6 +8,7 @@ ps31 = Player('ps', 3,1,0);
 
 % プレイヤ集合を作成
 player_set = PlayerSet({v10; ps21; ps31});
+player_pair = PlayerPair({v10; ps21});
 
 % プレイヤ集合に対して、考えられる全てのプレイヤマッチングを取得
 player_matchings = player_set.get_all_possible_player_matchings();
