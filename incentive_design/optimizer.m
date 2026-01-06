@@ -4,7 +4,7 @@ addpath('./class/solution')
 
 %%%% EDIT HERE %%%%
 target_data = 'result/symbolic_data.mat';
-stability_type = 'EBP'; % 'EBP' または 'EBP' のいずれか
+stability_type = 'BP'; % 'EBP' または 'EBP' のいずれか
 use_positive_incentive_condition = true; % マッチしないプレイヤに対して、インセンティブが0以上であることを制約する場合は true, そうでない場合は false
 %%%%%%%%%%%%%%%%%%%
 

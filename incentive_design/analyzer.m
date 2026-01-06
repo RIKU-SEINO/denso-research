@@ -9,7 +9,7 @@ stability_type = 'EBP'; % 'BP' または 'EBP' のいずれか
 should_analyze_stabilizability = true; % 安定化可能条件の導出を行うかどうか
 should_analyze_self_stability = false; % 自律的安定条件の導出を行うかどうか
 params_to_evaluate = {'g', 'p_2', 'p_3'}; % 数値的に評価するパラメータを文字列のcell配列で指定。
-use_positive_incentive_condition = true; % マッチしないプレイヤに対して、インセンティブが0以上であることを制約する場合は true, そうでない場合は false
+use_positive_incentive_condition = false; % マッチしないプレイヤに対して、インセンティブが0以上であることを制約する場合は true, そうでない場合は false
 %%%%%%%%%%%%%%%%%%%
 
 % 1. データの読み込み
@@ -58,14 +58,25 @@ if should_analyze_stabilizability
         variables, ...
         and(stability_ineq, incentive_ineq) ...
       );
-
-      fprintf('Fourier-Motzkin消去法を用いて、不等式制約の可解条件を導出します\n');
-      condition_ = EqualityInequalityHelper.get_mixed_feasibility_condition( ...
+      [A_reduced, b_reduced] = EqualityInequalityHelper.get_reduced_matrix( ...
         A_eq, ...
         b_eq, ...
         A_ineq, ...
         b_ineq ...
       );
+      conditions_ = EqualityInequalityHelper.get_inequality_feasibility_condition_MPT3( ...
+        A_reduced, ...
+        b_reduced ...
+      );
+      % conditions_ = EqualityInequalityHelper.get_inequality_feasibility_condition_FourierMotzkin( ...
+      %   vpa(A_reduced), ...
+      %   vpa(b_reduced) ...
+      % );
+
+      condition_ = symtrue;
+      for ii = 1:length(conditions_)
+        condition_ = and(condition_, conditions_(ii));
+      end
 
       condition = or(condition, condition_);
 
@@ -73,8 +84,14 @@ if should_analyze_stabilizability
         break; % 計算量を節約するため、常に成立するならばここで打ち切る
       end
     end
-    fprintf('方策%dをインセンティブ安定化することが可能な条件: %s\n', policy_index, simplify(condition));
+    condition = simplify(condition);
+    conditions = MathUtils.get_children(condition, '&');
+    fprintf('方策%dをインセンティブ安定化することが可能な条件:\n', policy_index);
+    for i = 1:length(conditions)
+      disp(EqualityInequalityHelper.normalize_inequality(conditions{i}, 'c', 3));
+    end
     disp('-----------------------------');
+    pause;
   end
 end
 
