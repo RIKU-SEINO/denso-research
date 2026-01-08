@@ -207,6 +207,12 @@ classdef EqualityInequalityHelper
         cond = simplify(lhs_expr) >= 0;
         conditions(end+1) = cond;
       end
+
+      if isempty(conditions) && isempty(null(A'))
+        conditions = symtrue;
+      elseif isempty(conditions)
+        conditions = symfalse;
+      end
     end
 
     function [A_new, b_new] = get_reduced_matrix(A_eq, b_eq, A_ineq, b_ineq)
@@ -456,11 +462,15 @@ classdef EqualityInequalityHelper
       % 2. target_varの係数を取得
       k = double(diff(poly, sym(target_var)));
 
-      % 3. 多項式をtarget_varの係数で割る
-      poly = poly / k;
+      if isAlways(k == 0)
+        ineq_normalized = ineq;
+      else
+        % 3. 多項式をtarget_varの係数で割る
+        poly = poly / k;
 
-      % 4. 多項式を正規化
-      ineq_normalized = poly >= 0;
+        % 4. 多項式を正規化
+        ineq_normalized = poly >= 0;
+      end
 
       % 5. 多項式を小数点以下の桁数で表示
       ineq_normalized = vpa(ineq_normalized, num_digits);
