@@ -168,6 +168,19 @@ classdef Solution
         obj.values = cellfun(@(x) double(x), obj.values, 'UniformOutput', false);
       end
     end
+
+    function obj = apply_incentive_eq(obj, incentive_eq)
+      % objのvaluesに含まれるインセンティブに関する等式制約を適用する
+      %
+      % Parameters:
+      %   obj (Solution): インセンティブに関する等式制約を適用するSolutionインスタンス
+      %   incentive_eq (sym): インセンティブに関する等式制約
+      %
+      % Returns:
+      %   obj (Solution): インセンティブに関する等式制約を適用したSolutionインスタンス
+
+      obj.values = cellfun(@(x) ParamsHelper.apply_incentive_eq(x, incentive_eq), obj.values, 'UniformOutput', false);
+    end
   end
 
   % validate obj

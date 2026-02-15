@@ -553,5 +553,38 @@ classdef ParamsHelper
       all_incentives = ParamsHelper.get_all_incentives_as_vector();
       expr = subs(expr, all_incentives, zeros(1, length(all_incentives)));
     end
+    function expr = apply_incentive_eq(expr, incentive_eq)
+      % インセンティブの等式制約を用いて式を簡略化する
+      %
+      % Parameters:
+      %   expr (sym): シンボリックな式
+      %   incentive_eq (sym): インセンティブに関する等式制約
+      %
+      % Returns:
+      %   expr (sym): 制約を代入して簡略化した式
+
+      if isempty(incentive_eq) || incentive_eq == symtrue
+        return;
+      end
+
+      % 等式制約に含まれる変数を取得
+      vars = symvar(incentive_eq);
+      if isempty(vars)
+        return;
+      end
+
+      % 等式制約を解く
+      sol = solve(incentive_eq, vars);
+      
+      % 解が存在する場合、代入を行う
+      if isstruct(sol)
+        % 構造体の場合（変数が複数の場合）
+        expr = subs(expr, sol);
+      elseif ~isempty(sol)
+        % 構造体でない場合（変数が1つの場合など）
+        % varsに対応する解がsolに入っている
+        expr = subs(expr, vars, sol);
+      end
+    end
   end
 end
