@@ -17,7 +17,6 @@ if exist(target_data, 'file')
   fprintf('データを読み込みます\n');
   data = load(target_data);
   policies = Policy.get_all_possible_policies();
-  state_value_solutions = data.state_value_solutions;
   expected_utility_solutions = data.expected_utility_solutions;
   disp('データを読み込みました');
 else
@@ -27,7 +26,6 @@ end
 % 2. パラメータを数値的に評価したSolutionを作成する
 fprintf('パラメータを数値的に評価したSolutionを作成します\n');
 for i = 1:length(policies)
-  state_value_solutions{i} = state_value_solutions{i}.eval_params(params_to_evaluate);
   expected_utility_solutions{i} = expected_utility_solutions{i}.eval_params(params_to_evaluate);
 end
 fprintf('パラメータを数値的に評価したSolutionを作成しました\n');
