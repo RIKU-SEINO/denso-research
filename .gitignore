@@ -1,6 +1,9 @@
 # .DS_Store
 .DS_Store
 
+# tbxmanager (MPT3)
+tbxmanager/
+
 # datasets
 datasets/*
 

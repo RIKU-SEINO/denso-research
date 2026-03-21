@@ -4,7 +4,7 @@ addpath('./class/solution')
 addpath('./class/visualizer')
 
 %%%% EDIT HERE %%%%
-stability_type = 'EBP'; % 'BP' または 'EBP'
+stability_type = 'BP'; % 'BP' または 'EBP'
 policy_index = 8;
 use_positive_incentive_condition = true; % マッチしないプレイヤに対して、インセンティブが0以上であることを制約する場合は true, そうでない場合は false
 mode = 'optimal_value_projection'; % 'fixed_value_projection' または 'optimal_value_projection'

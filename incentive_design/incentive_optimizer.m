@@ -78,7 +78,7 @@ for i = 8:length(policies)
 
   fprintf('方策%dを安定化するインセンティブを用いて、各方策ごとに期待効用を計算しますか？ (y/n): ', i);
   display_result = input('', 's');
-  if OptimizationProblem.is_success(result) && display_result == 'y'
+  if OptimizationProblem.is_success(result) && ischar(display_result) && numel(display_result) == 1 && display_result == 'y'
     incentive_solution = Solution.to_solution(variables, result.x);
     % 最適化されたインセンティブを用いて、全ての方策について期待効用を計算する
     evaluated_expected_utility_solutions_without_incentive = cell(length(policies), 1);

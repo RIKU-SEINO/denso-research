@@ -6,19 +6,11 @@ disp('----------------------------------------------');
 disp('Toolbox マネージャを用いた MPT のインストール');
 disp('----------------------------------------------');
 disp(' ');
-fprintf(['Toolbox マネージャをインストールする親フォルダを選んでください。\n',...
-      '指定した場所に新しいフォルダ "tbxmanager" が作成されます。\n',...
-      'すでに "tbxmanager" がある場合は、クリーンインストールのため完全に削除します。\n',...
-      'キャンセルした場合は、現在のフォルダに Toolbox マネージャをインストールします。\n']);
 
-% インストール先の親フォルダ
+% インストール先: このスクリプトと同じフォルダ直下の tbxmanager/
 default_dir = pwd;
-c = uigetdir(pwd);
-if isequal(c,0);
-    fprintf(['フォルダが指定されませんでした。\n',... 
-        'Toolbox マネージャを現在のフォルダ "%s" にインストールします。\n'],default_dir);
-    c = default_dir;
-end
+c = fileparts(mfilename('fullpath'));
+fprintf('インストール先: %s%stbxmanager\n', c, filesep);
  
 % 親フォルダ直下に tbxmanager を作成（既存は削除してから再インストール）
 d = [c,filesep,'tbxmanager'];
@@ -89,14 +81,8 @@ disp('今後のセッション用にパスを保存しています。');
 status = savepath;
 
 if status
-    fprintf('デフォルトの場所にパスを保存できませんでした。\npathdef.m を保存するフォルダを指定してください。');
-    cn = uigetdir(pwd);
-    if isequal(cn,0)
-        disp(' ');
-        fprintf('フォルダが指定されなかったため、現在のフォルダ "%s" に pathdef.m を保存します。\n\n',default_dir);
-        cn = default_dir;
-    end
-    sn = savepath([cn,filesep,'pathdef.m']);
+    fprintf('デフォルトの場所にパスを保存できませんでした。\n現在のフォルダ "%s" に pathdef.m を保存します。\n', default_dir);
+    sn = savepath([default_dir, filesep, 'pathdef.m']);
     if sn
         error(['パスを自動保存できませんでした。\n',...
             'MATLAB メニューの「パスの設定」から手動でパスを保存してください。']);
